@@ -30,6 +30,16 @@ export interface CreditCardPurchase {
   category: string;
 }
 
+export interface CreditCardSubscription {
+  id: string;
+  cardId: string;
+  description: string;
+  amount: number;
+  startDate: Date;
+  category: string;
+  isActive: boolean;
+}
+
 export interface Invoice {
   id: string;
   cardId: string;
@@ -39,6 +49,7 @@ export interface Invoice {
   dueDate: Date;
   isPaid: boolean;
   purchases: CreditCardPurchase[];
+  subscriptions: CreditCardSubscription[];
 }
 
 export interface FinancialGoal {

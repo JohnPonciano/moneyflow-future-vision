@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Dashboard } from '@/components/dashboard/Dashboard';
@@ -6,9 +5,9 @@ import { Transactions } from '@/components/transactions/Transactions';
 import { Goals } from '@/components/goals/Goals';
 import { Purchases } from '@/components/purchases/Purchases';
 import { Cards } from '@/components/cards/Cards';
-import { Transaction, FinancialGoal, PlannedPurchase, CreditCard, CreditCardPurchase, FinancialSummary } from '@/lib/types';
+import { Transaction, FinancialGoal, PlannedPurchase, CreditCard, CreditCardPurchase, CreditCardSubscription, FinancialSummary } from '@/lib/types';
 import { FinancialEngine } from '@/lib/financial-engine';
-import { mockTransactions, mockGoals, mockPlannedPurchases, mockCreditCards, mockCreditCardPurchases } from '@/lib/mock-data';
+import { mockTransactions, mockGoals, mockPlannedPurchases, mockCreditCards, mockCreditCardPurchases, mockCreditCardSubscriptions } from '@/lib/mock-data';
 
 const Index = () => {
   const [currentPage, setCurrentPage] = useState('dashboard');
@@ -17,6 +16,7 @@ const Index = () => {
   const [plannedPurchases, setPlannedPurchases] = useState<PlannedPurchase[]>(mockPlannedPurchases);
   const [creditCards, setCreditCards] = useState<CreditCard[]>(mockCreditCards);
   const [creditCardPurchases, setCreditCardPurchases] = useState<CreditCardPurchase[]>(mockCreditCardPurchases);
+  const [creditCardSubscriptions, setCreditCardSubscriptions] = useState<CreditCardSubscription[]>(mockCreditCardSubscriptions);
 
   // Generate financial summary
   const currentBalance = 8500; // Mock current balance
@@ -105,6 +105,26 @@ const Index = () => {
     setCreditCardPurchases(creditCardPurchases.filter(p => p.id !== id));
   };
 
+  const handleAddCreditCardSubscription = (subscription: Omit<CreditCardSubscription, 'id'>) => {
+    const newSubscription = {
+      ...subscription,
+      id: Date.now().toString()
+    };
+    setCreditCardSubscriptions([...creditCardSubscriptions, newSubscription]);
+  };
+
+  const handleDeleteCreditCardSubscription = (id: string) => {
+    setCreditCardSubscriptions(creditCardSubscriptions.filter(s => s.id !== id));
+  };
+
+  const handleToggleCreditCardSubscription = (id: string) => {
+    setCreditCardSubscriptions(creditCardSubscriptions.map(subscription =>
+      subscription.id === id
+        ? { ...subscription, isActive: !subscription.isActive }
+        : subscription
+    ));
+  };
+
   const renderCurrentPage = () => {
     switch (currentPage) {
       case 'dashboard':
@@ -148,10 +168,14 @@ const Index = () => {
           <Cards
             cards={creditCards}
             purchases={creditCardPurchases}
+            subscriptions={creditCardSubscriptions}
             onAddCard={handleAddCard}
             onAddPurchase={handleAddCreditCardPurchase}
+            onAddSubscription={handleAddCreditCardSubscription}
             onDeleteCard={handleDeleteCard}
             onDeletePurchase={handleDeleteCreditCardPurchase}
+            onDeleteSubscription={handleDeleteCreditCardSubscription}
+            onToggleSubscription={handleToggleCreditCardSubscription}
           />
         );
       case 'settings':

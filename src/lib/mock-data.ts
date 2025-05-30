@@ -1,5 +1,4 @@
-
-import { Transaction, CreditCard, CreditCardPurchase, FinancialGoal, PlannedPurchase, Debt } from './types';
+import { Transaction, CreditCard, CreditCardPurchase, CreditCardSubscription, FinancialGoal, PlannedPurchase, Debt } from './types';
 
 export const mockTransactions: Transaction[] = [
   {
@@ -79,6 +78,36 @@ export const mockCreditCardPurchases: CreditCardPurchase[] = [
     installments: 1,
     purchaseDate: new Date(2024, 4, 12),
     category: 'Alimentação'
+  }
+];
+
+export const mockCreditCardSubscriptions: CreditCardSubscription[] = [
+  {
+    id: '1',
+    cardId: '1',
+    description: 'Netflix',
+    amount: 45.90,
+    startDate: new Date(2024, 0, 1),
+    category: 'Entretenimento',
+    isActive: true
+  },
+  {
+    id: '2',
+    cardId: '1',
+    description: 'Spotify',
+    amount: 21.90,
+    startDate: new Date(2024, 1, 15),
+    category: 'Entretenimento',
+    isActive: true
+  },
+  {
+    id: '3',
+    cardId: '2',
+    description: 'Adobe Creative',
+    amount: 89.90,
+    startDate: new Date(2024, 2, 1),
+    category: 'Trabalho',
+    isActive: true
   }
 ];
 

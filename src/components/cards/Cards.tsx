@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -6,21 +5,39 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { CreditCard, CreditCardPurchase, Invoice } from '@/lib/types';
-import { Plus, CreditCard as CreditCardIcon, Calendar, DollarSign, Trash2 } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { CreditCard, CreditCardPurchase, CreditCardSubscription, Invoice } from '@/lib/types';
+import { Plus, CreditCard as CreditCardIcon, Calendar, DollarSign, Trash2, RotateCcw } from 'lucide-react';
 
 interface CardsProps {
   cards: CreditCard[];
   purchases: CreditCardPurchase[];
+  subscriptions: CreditCardSubscription[];
   onAddCard: (card: Omit<CreditCard, 'id'>) => void;
   onAddPurchase: (purchase: Omit<CreditCardPurchase, 'id'>) => void;
+  onAddSubscription: (subscription: Omit<CreditCardSubscription, 'id'>) => void;
   onDeleteCard: (id: string) => void;
   onDeletePurchase: (id: string) => void;
+  onDeleteSubscription: (id: string) => void;
+  onToggleSubscription: (id: string) => void;
 }
 
-export function Cards({ cards, purchases, onAddCard, onAddPurchase, onDeleteCard, onDeletePurchase }: CardsProps) {
+export function Cards({ 
+  cards, 
+  purchases, 
+  subscriptions, 
+  onAddCard, 
+  onAddPurchase, 
+  onAddSubscription, 
+  onDeleteCard, 
+  onDeletePurchase, 
+  onDeleteSubscription,
+  onToggleSubscription 
+}: CardsProps) {
   const [showCardForm, setShowCardForm] = useState(false);
   const [showPurchaseForm, setShowPurchaseForm] = useState(false);
+  const [showSubscriptionForm, setShowSubscriptionForm] = useState(false);
+  
   const [cardForm, setCardForm] = useState({
     name: '',
     limit: '',
@@ -34,6 +51,13 @@ export function Cards({ cards, purchases, onAddCard, onAddPurchase, onDeleteCard
     amount: '',
     installments: '1',
     purchaseDate: new Date().toISOString().split('T')[0],
+    category: ''
+  });
+  const [subscriptionForm, setSubscriptionForm] = useState({
+    cardId: '',
+    description: '',
+    amount: '',
+    startDate: new Date().toISOString().split('T')[0],
     category: ''
   });
 
@@ -52,13 +76,32 @@ export function Cards({ cards, purchases, onAddCard, onAddPurchase, onDeleteCard
     }).format(date);
   };
 
-  const calculateCardUsage = (cardId: string) => {
+  const calculateUsedLimit = (cardId: string) => {
     const cardPurchases = purchases.filter(p => p.cardId === cardId);
-    const totalUsed = cardPurchases.reduce((sum, purchase) => {
+    const cardSubscriptions = subscriptions.filter(s => s.cardId === cardId && s.isActive);
+    
+    // Calcula o valor das parcelas ainda não pagas
+    const now = new Date();
+    const purchasesUsedLimit = cardPurchases.reduce((sum, purchase) => {
+      const monthsSincePurchase = (now.getFullYear() - purchase.purchaseDate.getFullYear()) * 12 + 
+                                  (now.getMonth() - purchase.purchaseDate.getMonth());
+      const remainingInstallments = Math.max(0, purchase.installments - monthsSincePurchase);
       const monthlyInstallment = purchase.amount / purchase.installments;
-      return sum + monthlyInstallment;
+      return sum + (monthlyInstallment * remainingInstallments);
     }, 0);
-    return totalUsed;
+    
+    // Soma as assinaturas ativas (cada assinatura ocupa seu valor integral no limite)
+    const subscriptionsUsedLimit = cardSubscriptions.reduce((sum, subscription) => sum + subscription.amount, 0);
+    
+    return purchasesUsedLimit + subscriptionsUsedLimit;
+  };
+
+  const calculateAvailableLimit = (cardId: string) => {
+    const card = cards.find(c => c.id === cardId);
+    if (!card) return 0;
+    
+    const usedLimit = calculateUsedLimit(cardId);
+    return Math.max(0, card.limit - usedLimit);
   };
 
   const generateInvoice = (cardId: string, month: number, year: number): Invoice => {
@@ -69,7 +112,15 @@ export function Cards({ cards, purchases, onAddCard, onAddPurchase, onDeleteCard
              purchaseDate.getFullYear() <= year;
     });
 
-    const totalAmount = cardPurchases.reduce((sum, purchase) => {
+    const cardSubscriptions = subscriptions.filter(s => {
+      const startDate = new Date(s.startDate);
+      return s.cardId === cardId && 
+             s.isActive &&
+             startDate.getMonth() <= month && 
+             startDate.getFullYear() <= year;
+    });
+
+    const purchasesAmount = cardPurchases.reduce((sum, purchase) => {
       const installmentValue = purchase.amount / purchase.installments;
       const monthsSincePurchase = (year - purchase.purchaseDate.getFullYear()) * 12 + 
                                   (month - purchase.purchaseDate.getMonth());
@@ -79,6 +130,9 @@ export function Cards({ cards, purchases, onAddCard, onAddPurchase, onDeleteCard
       }
       return sum;
     }, 0);
+
+    const subscriptionsAmount = cardSubscriptions.reduce((sum, subscription) => sum + subscription.amount, 0);
+    const totalAmount = purchasesAmount + subscriptionsAmount;
 
     const card = cards.find(c => c.id === cardId)!;
     const dueDate = new Date(year, month, card.dueDay);
@@ -91,7 +145,8 @@ export function Cards({ cards, purchases, onAddCard, onAddPurchase, onDeleteCard
       amount: totalAmount,
       dueDate,
       isPaid: false,
-      purchases: cardPurchases
+      purchases: cardPurchases,
+      subscriptions: cardSubscriptions
     };
   };
 
@@ -151,26 +206,58 @@ export function Cards({ cards, purchases, onAddCard, onAddPurchase, onDeleteCard
     setShowPurchaseForm(false);
   };
 
+  const handleSubscriptionSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!subscriptionForm.cardId || !subscriptionForm.description || !subscriptionForm.amount || !subscriptionForm.category) {
+      return;
+    }
+
+    const subscription: Omit<CreditCardSubscription, 'id'> = {
+      cardId: subscriptionForm.cardId,
+      description: subscriptionForm.description,
+      amount: parseFloat(subscriptionForm.amount),
+      startDate: new Date(subscriptionForm.startDate),
+      category: subscriptionForm.category,
+      isActive: true
+    };
+
+    onAddSubscription(subscription);
+    
+    setSubscriptionForm({
+      cardId: '',
+      description: '',
+      amount: '',
+      startDate: new Date().toISOString().split('T')[0],
+      category: ''
+    });
+    setShowSubscriptionForm(false);
+  };
+
   const currentMonth = new Date().getMonth();
   const currentYear = new Date().getFullYear();
 
-  const categories = ['Alimentação', 'Transporte', 'Saúde', 'Educação', 'Lazer', 'Eletrônicos', 'Roupas', 'Casa', 'Outros'];
+  const categories = ['Alimentação', 'Transporte', 'Saúde', 'Educação', 'Lazer', 'Eletrônicos', 'Roupas', 'Casa', 'Entretenimento', 'Trabalho', 'Outros'];
 
   return (
     <div className="space-y-8 p-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-slate-900">Cartões de Crédito</h1>
-          <p className="text-slate-600 mt-1">Gerencie seus cartões e acompanhe as faturas</p>
+          <p className="text-slate-600 mt-1">Gerencie seus cartões, compras e assinaturas</p>
         </div>
         <div className="flex gap-2">
           <Button onClick={() => setShowCardForm(!showCardForm)} variant="outline" className="gap-2">
             <Plus className="h-4 w-4" />
             Novo Cartão
           </Button>
-          <Button onClick={() => setShowPurchaseForm(!showPurchaseForm)} className="gap-2">
+          <Button onClick={() => setShowPurchaseForm(!showPurchaseForm)} variant="outline" className="gap-2">
             <Plus className="h-4 w-4" />
             Nova Compra
+          </Button>
+          <Button onClick={() => setShowSubscriptionForm(!showSubscriptionForm)} className="gap-2">
+            <RotateCcw className="h-4 w-4" />
+            Nova Assinatura
           </Button>
         </div>
       </div>
@@ -360,12 +447,103 @@ export function Cards({ cards, purchases, onAddCard, onAddPurchase, onDeleteCard
         </Card>
       )}
 
+      {/* Formulário de Assinatura */}
+      {showSubscriptionForm && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Adicionar Assinatura</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubscriptionSubmit} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="subscriptionCardSelect">Cartão</Label>
+                  <Select value={subscriptionForm.cardId} onValueChange={(value) => setSubscriptionForm({...subscriptionForm, cardId: value})}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione um cartão" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {cards.map((card) => (
+                        <SelectItem key={card.id} value={card.id}>
+                          {card.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label htmlFor="subscriptionCategory">Categoria</Label>
+                  <Select value={subscriptionForm.category} onValueChange={(value) => setSubscriptionForm({...subscriptionForm, category: value})}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione uma categoria" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {categories.map((category) => (
+                        <SelectItem key={category} value={category}>
+                          {category}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label htmlFor="subscriptionDescription">Descrição</Label>
+                  <Input
+                    id="subscriptionDescription"
+                    placeholder="Ex: Netflix, Spotify..."
+                    value={subscriptionForm.description}
+                    onChange={(e) => setSubscriptionForm({...subscriptionForm, description: e.target.value})}
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="subscriptionAmount">Valor Mensal</Label>
+                  <div className="relative">
+                    <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-500" />
+                    <Input
+                      id="subscriptionAmount"
+                      type="number"
+                      step="0.01"
+                      placeholder="0,00"
+                      value={subscriptionForm.amount}
+                      onChange={(e) => setSubscriptionForm({...subscriptionForm, amount: e.target.value})}
+                      className="pl-10"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <Label htmlFor="subscriptionStartDate">Data de Início</Label>
+                  <Input
+                    id="subscriptionStartDate"
+                    type="date"
+                    value={subscriptionForm.startDate}
+                    onChange={(e) => setSubscriptionForm({...subscriptionForm, startDate: e.target.value})}
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-2">
+                <Button type="submit">Adicionar Assinatura</Button>
+                <Button type="button" variant="outline" onClick={() => setShowSubscriptionForm(false)}>
+                  Cancelar
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Lista de Cartões */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {cards.map((card) => {
-          const usage = calculateCardUsage(card.id);
-          const usagePercentage = (usage / card.limit) * 100;
+          const usedLimit = calculateUsedLimit(card.id);
+          const availableLimit = calculateAvailableLimit(card.id);
+          const usagePercentage = (usedLimit / card.limit) * 100;
           const currentInvoice = generateInvoice(card.id, currentMonth, currentYear);
+          const cardSubscriptions = subscriptions.filter(s => s.cardId === card.id);
           
           return (
             <Card key={card.id} className="relative overflow-hidden">
@@ -403,7 +581,7 @@ export function Cards({ cards, purchases, onAddCard, onAddPurchase, onDeleteCard
               <CardContent className="relative space-y-4">
                 <div>
                   <div className="flex justify-between items-center mb-2">
-                    <span className="text-sm text-slate-600">Uso do limite</span>
+                    <span className="text-sm text-slate-600">Limite usado</span>
                     <span className="text-sm font-medium">{usagePercentage.toFixed(1)}%</span>
                   </div>
                   <div className="w-full bg-slate-200 rounded-full h-2">
@@ -416,11 +594,46 @@ export function Cards({ cards, purchases, onAddCard, onAddPurchase, onDeleteCard
                     />
                   </div>
                   <div className="flex justify-between text-xs text-slate-500 mt-1">
-                    <span>Usado: {formatCurrency(usage)}</span>
-                    <span>Disponível: {formatCurrency(card.limit - usage)}</span>
+                    <span>Usado: {formatCurrency(usedLimit)}</span>
+                    <span>Disponível: {formatCurrency(availableLimit)}</span>
                   </div>
                 </div>
 
+                {/* Assinaturas Ativas */}
+                {cardSubscriptions.filter(s => s.isActive).length > 0 && (
+                  <div className="border-t pt-4">
+                    <h4 className="font-medium mb-2">Assinaturas Ativas</h4>
+                    <div className="space-y-1 max-h-24 overflow-y-auto">
+                      {cardSubscriptions
+                        .filter(s => s.isActive)
+                        .map((subscription) => (
+                          <div key={subscription.id} className="flex justify-between items-center text-xs">
+                            <div className="flex items-center gap-2">
+                              <p className="font-medium">{subscription.description}</p>
+                              <Switch
+                                checked={subscription.isActive}
+                                onCheckedChange={() => onToggleSubscription(subscription.id)}
+                                className="scale-75"
+                              />
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <span className="font-medium">{formatCurrency(subscription.amount)}</span>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => onDeleteSubscription(subscription.id)}
+                                className="h-4 w-4 p-0 text-red-600 hover:bg-red-50"
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Fatura Atual */}
                 <div className="border-t pt-4">
                   <h4 className="font-medium mb-2">Fatura Atual</h4>
                   <div className="space-y-2 text-sm">
