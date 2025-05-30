@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Dashboard } from '@/components/dashboard/Dashboard';
@@ -6,6 +5,7 @@ import { Transactions } from '@/components/transactions/Transactions';
 import { Goals } from '@/components/goals/Goals';
 import { Purchases } from '@/components/purchases/Purchases';
 import { Cards } from '@/components/cards/Cards';
+import { Payments } from '@/components/payments/Payments';
 import { FinancialSummary } from '@/lib/types';
 import { FinancialEngine } from '@/lib/financial-engine';
 import { useTransactions } from '@/hooks/useTransactions';
@@ -124,6 +124,10 @@ const Index = () => {
             onDeleteSubscription={deleteCreditCardSubscription}
             onToggleSubscription={toggleCreditCardSubscription}
           />
+        );
+      case 'payments':
+        return (
+          <Payments />
         );
       case 'settings':
         return (
