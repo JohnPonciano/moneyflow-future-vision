@@ -9,7 +9,283 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      credit_card_purchases: {
+        Row: {
+          amount: number
+          card_id: string
+          category: string
+          created_at: string
+          description: string
+          id: string
+          installments: number
+          purchase_date: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          card_id: string
+          category: string
+          created_at?: string
+          description: string
+          id?: string
+          installments?: number
+          purchase_date: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          card_id?: string
+          category?: string
+          created_at?: string
+          description?: string
+          id?: string
+          installments?: number
+          purchase_date?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "credit_card_purchases_card_id_fkey"
+            columns: ["card_id"]
+            isOneToOne: false
+            referencedRelation: "credit_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      credit_card_subscriptions: {
+        Row: {
+          amount: number
+          card_id: string
+          category: string
+          created_at: string
+          description: string
+          id: string
+          is_active: boolean
+          start_date: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          card_id: string
+          category: string
+          created_at?: string
+          description: string
+          id?: string
+          is_active?: boolean
+          start_date: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          card_id?: string
+          category?: string
+          created_at?: string
+          description?: string
+          id?: string
+          is_active?: boolean
+          start_date?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "credit_card_subscriptions_card_id_fkey"
+            columns: ["card_id"]
+            isOneToOne: false
+            referencedRelation: "credit_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      credit_cards: {
+        Row: {
+          closing_day: number
+          color: string
+          created_at: string
+          due_day: number
+          id: string
+          limit_amount: number
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          closing_day: number
+          color: string
+          created_at?: string
+          due_day: number
+          id?: string
+          limit_amount: number
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          closing_day?: number
+          color?: string
+          created_at?: string
+          due_day?: number
+          id?: string
+          limit_amount?: number
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      debts: {
+        Row: {
+          created_at: string
+          id: string
+          installments_left: number
+          interest_rate: number
+          monthly_payment: number
+          name: string
+          remaining_amount: number
+          total_amount: number
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          installments_left: number
+          interest_rate: number
+          monthly_payment: number
+          name: string
+          remaining_amount: number
+          total_amount: number
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          installments_left?: number
+          interest_rate?: number
+          monthly_payment?: number
+          name?: string
+          remaining_amount?: number
+          total_amount?: number
+          type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      financial_goals: {
+        Row: {
+          category: string
+          created_at: string
+          current_amount: number
+          deadline: string
+          id: string
+          priority: string
+          target_amount: number
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          current_amount?: number
+          deadline: string
+          id?: string
+          priority: string
+          target_amount: number
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          current_amount?: number
+          deadline?: string
+          id?: string
+          priority?: string
+          target_amount?: number
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      planned_purchases: {
+        Row: {
+          can_install: boolean
+          category: string
+          created_at: string
+          estimated_price: number
+          id: string
+          item: string
+          max_installments: number | null
+          notes: string | null
+          updated_at: string
+          urgency: string
+        }
+        Insert: {
+          can_install?: boolean
+          category: string
+          created_at?: string
+          estimated_price: number
+          id?: string
+          item: string
+          max_installments?: number | null
+          notes?: string | null
+          updated_at?: string
+          urgency: string
+        }
+        Update: {
+          can_install?: boolean
+          category?: string
+          created_at?: string
+          estimated_price?: number
+          id?: string
+          item?: string
+          max_installments?: number | null
+          notes?: string | null
+          updated_at?: string
+          urgency?: string
+        }
+        Relationships: []
+      }
+      transactions: {
+        Row: {
+          amount: number
+          category: string
+          created_at: string
+          date: string
+          description: string
+          id: string
+          is_recurring: boolean
+          recurring_pattern: string | null
+          tags: string[] | null
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          category: string
+          created_at?: string
+          date: string
+          description: string
+          id?: string
+          is_recurring?: boolean
+          recurring_pattern?: string | null
+          tags?: string[] | null
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          category?: string
+          created_at?: string
+          date?: string
+          description?: string
+          id?: string
+          is_recurring?: boolean
+          recurring_pattern?: string | null
+          tags?: string[] | null
+          type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

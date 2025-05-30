@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Dashboard } from '@/components/dashboard/Dashboard';
@@ -5,27 +6,61 @@ import { Transactions } from '@/components/transactions/Transactions';
 import { Goals } from '@/components/goals/Goals';
 import { Purchases } from '@/components/purchases/Purchases';
 import { Cards } from '@/components/cards/Cards';
-import { Transaction, FinancialGoal, PlannedPurchase, CreditCard, CreditCardPurchase, CreditCardSubscription, FinancialSummary } from '@/lib/types';
+import { FinancialSummary } from '@/lib/types';
 import { FinancialEngine } from '@/lib/financial-engine';
-import { mockTransactions, mockGoals, mockPlannedPurchases, mockCreditCards, mockCreditCardPurchases, mockCreditCardSubscriptions } from '@/lib/mock-data';
+import { useTransactions } from '@/hooks/useTransactions';
+import { useGoals } from '@/hooks/useGoals';
+import { usePlannedPurchases } from '@/hooks/usePlannedPurchases';
+import { useCreditCards } from '@/hooks/useCreditCards';
 
 const Index = () => {
   const [currentPage, setCurrentPage] = useState('dashboard');
-  const [transactions, setTransactions] = useState<Transaction[]>(mockTransactions);
-  const [goals, setGoals] = useState<FinancialGoal[]>(mockGoals);
-  const [plannedPurchases, setPlannedPurchases] = useState<PlannedPurchase[]>(mockPlannedPurchases);
-  const [creditCards, setCreditCards] = useState<CreditCard[]>(mockCreditCards);
-  const [creditCardPurchases, setCreditCardPurchases] = useState<CreditCardPurchase[]>(mockCreditCardPurchases);
-  const [creditCardSubscriptions, setCreditCardSubscriptions] = useState<CreditCardSubscription[]>(mockCreditCardSubscriptions);
+  
+  // Use custom hooks for data management
+  const {
+    transactions,
+    loading: transactionsLoading,
+    addTransaction,
+    deleteTransaction
+  } = useTransactions();
+
+  const {
+    goals,
+    loading: goalsLoading,
+    addGoal,
+    updateGoal,
+    deleteGoal
+  } = useGoals();
+
+  const {
+    purchases: plannedPurchases,
+    loading: purchasesLoading,
+    addPurchase: addPlannedPurchase,
+    deletePurchase: deletePlannedPurchase
+  } = usePlannedPurchases();
+
+  const {
+    creditCards,
+    purchases: creditCardPurchases,
+    subscriptions: creditCardSubscriptions,
+    loading: cardsLoading,
+    addCard,
+    deleteCard,
+    addPurchase: addCreditCardPurchase,
+    deletePurchase: deleteCreditCardPurchase,
+    addSubscription: addCreditCardSubscription,
+    deleteSubscription: deleteCreditCardSubscription,
+    toggleSubscription: toggleCreditCardSubscription
+  } = useCreditCards();
 
   // Generate financial summary
-  const currentBalance = 8500; // Mock current balance
+  const currentBalance = 8500; // Mock current balance - you can make this dynamic later
   const monthlyIncome = FinancialEngine.calculateMonthlyIncome(transactions);
   const monthlyExpenses = FinancialEngine.calculateMonthlyExpenses(transactions);
   const projectedBalance = FinancialEngine.calculateProjectedBalance(currentBalance, transactions, creditCardPurchases);
   const creditCardDebt = creditCardPurchases.reduce((sum, p) => sum + (p.amount / p.installments), 0);
-  const totalDebts = creditCardDebt + 15000; // Mock additional debts
-  const savingsRate = (monthlyIncome - monthlyExpenses) / monthlyIncome;
+  const totalDebts = creditCardDebt + 15000; // Mock additional debts - you can make this dynamic later
+  const savingsRate = monthlyIncome > 0 ? (monthlyIncome - monthlyExpenses) / monthlyIncome : 0;
 
   const summary: FinancialSummary = {
     currentBalance,
@@ -35,94 +70,6 @@ const Index = () => {
     creditCardDebt,
     totalDebts,
     savingsRate
-  };
-
-  // Event handlers
-  const handleAddTransaction = (transaction: Omit<Transaction, 'id'>) => {
-    const newTransaction = {
-      ...transaction,
-      id: Date.now().toString()
-    };
-    setTransactions([...transactions, newTransaction]);
-  };
-
-  const handleDeleteTransaction = (id: string) => {
-    setTransactions(transactions.filter(t => t.id !== id));
-  };
-
-  const handleAddGoal = (goal: Omit<FinancialGoal, 'id'>) => {
-    const newGoal = {
-      ...goal,
-      id: Date.now().toString()
-    };
-    setGoals([...goals, newGoal]);
-  };
-
-  const handleUpdateGoal = (id: string, currentAmount: number) => {
-    setGoals(goals.map(goal => 
-      goal.id === id ? { ...goal, currentAmount } : goal
-    ));
-  };
-
-  const handleDeleteGoal = (id: string) => {
-    setGoals(goals.filter(g => g.id !== id));
-  };
-
-  const handleAddPurchase = (purchase: Omit<PlannedPurchase, 'id'>) => {
-    const newPurchase = {
-      ...purchase,
-      id: Date.now().toString()
-    };
-    setPlannedPurchases([...plannedPurchases, newPurchase]);
-  };
-
-  const handleDeletePurchase = (id: string) => {
-    setPlannedPurchases(plannedPurchases.filter(p => p.id !== id));
-  };
-
-  const handleAddCard = (card: Omit<CreditCard, 'id'>) => {
-    const newCard = {
-      ...card,
-      id: Date.now().toString()
-    };
-    setCreditCards([...creditCards, newCard]);
-  };
-
-  const handleDeleteCard = (id: string) => {
-    setCreditCards(creditCards.filter(c => c.id !== id));
-    setCreditCardPurchases(creditCardPurchases.filter(p => p.cardId !== id));
-  };
-
-  const handleAddCreditCardPurchase = (purchase: Omit<CreditCardPurchase, 'id'>) => {
-    const newPurchase = {
-      ...purchase,
-      id: Date.now().toString()
-    };
-    setCreditCardPurchases([...creditCardPurchases, newPurchase]);
-  };
-
-  const handleDeleteCreditCardPurchase = (id: string) => {
-    setCreditCardPurchases(creditCardPurchases.filter(p => p.id !== id));
-  };
-
-  const handleAddCreditCardSubscription = (subscription: Omit<CreditCardSubscription, 'id'>) => {
-    const newSubscription = {
-      ...subscription,
-      id: Date.now().toString()
-    };
-    setCreditCardSubscriptions([...creditCardSubscriptions, newSubscription]);
-  };
-
-  const handleDeleteCreditCardSubscription = (id: string) => {
-    setCreditCardSubscriptions(creditCardSubscriptions.filter(s => s.id !== id));
-  };
-
-  const handleToggleCreditCardSubscription = (id: string) => {
-    setCreditCardSubscriptions(creditCardSubscriptions.map(subscription =>
-      subscription.id === id
-        ? { ...subscription, isActive: !subscription.isActive }
-        : subscription
-    ));
   };
 
   const renderCurrentPage = () => {
@@ -141,17 +88,17 @@ const Index = () => {
         return (
           <Transactions
             transactions={transactions}
-            onAddTransaction={handleAddTransaction}
-            onDeleteTransaction={handleDeleteTransaction}
+            onAddTransaction={addTransaction}
+            onDeleteTransaction={deleteTransaction}
           />
         );
       case 'goals':
         return (
           <Goals
             goals={goals}
-            onAddGoal={handleAddGoal}
-            onUpdateGoal={handleUpdateGoal}
-            onDeleteGoal={handleDeleteGoal}
+            onAddGoal={addGoal}
+            onUpdateGoal={updateGoal}
+            onDeleteGoal={deleteGoal}
           />
         );
       case 'purchases':
@@ -159,8 +106,8 @@ const Index = () => {
           <Purchases
             purchases={plannedPurchases}
             summary={summary}
-            onAddPurchase={handleAddPurchase}
-            onDeletePurchase={handleDeletePurchase}
+            onAddPurchase={addPlannedPurchase}
+            onDeletePurchase={deletePlannedPurchase}
           />
         );
       case 'cards':
@@ -169,13 +116,13 @@ const Index = () => {
             cards={creditCards}
             purchases={creditCardPurchases}
             subscriptions={creditCardSubscriptions}
-            onAddCard={handleAddCard}
-            onAddPurchase={handleAddCreditCardPurchase}
-            onAddSubscription={handleAddCreditCardSubscription}
-            onDeleteCard={handleDeleteCard}
-            onDeletePurchase={handleDeleteCreditCardPurchase}
-            onDeleteSubscription={handleDeleteCreditCardSubscription}
-            onToggleSubscription={handleToggleCreditCardSubscription}
+            onAddCard={addCard}
+            onAddPurchase={addCreditCardPurchase}
+            onAddSubscription={addCreditCardSubscription}
+            onDeleteCard={deleteCard}
+            onDeletePurchase={deleteCreditCardPurchase}
+            onDeleteSubscription={deleteCreditCardSubscription}
+            onToggleSubscription={toggleCreditCardSubscription}
           />
         );
       case 'settings':
@@ -189,6 +136,18 @@ const Index = () => {
         return null;
     }
   };
+
+  // Show loading state if any data is still loading
+  if (transactionsLoading || goalsLoading || purchasesLoading || cardsLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-slate-600">Carregando dados financeiros...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
