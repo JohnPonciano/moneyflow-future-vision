@@ -1,0 +1,86 @@
+
+export interface Transaction {
+  id: string;
+  type: 'income' | 'expense';
+  category: string;
+  amount: number;
+  description: string;
+  date: Date;
+  isRecurring: boolean;
+  recurringPattern?: 'monthly' | 'weekly' | 'yearly';
+  tags?: string[];
+}
+
+export interface CreditCard {
+  id: string;
+  name: string;
+  limit: number;
+  closingDay: number;
+  dueDay: number;
+  color: string;
+}
+
+export interface CreditCardPurchase {
+  id: string;
+  cardId: string;
+  description: string;
+  amount: number;
+  installments: number;
+  purchaseDate: Date;
+  category: string;
+}
+
+export interface Invoice {
+  id: string;
+  cardId: string;
+  month: number;
+  year: number;
+  amount: number;
+  dueDate: Date;
+  isPaid: boolean;
+  purchases: CreditCardPurchase[];
+}
+
+export interface FinancialGoal {
+  id: string;
+  title: string;
+  targetAmount: number;
+  currentAmount: number;
+  deadline: Date;
+  priority: 'high' | 'medium' | 'low';
+  category: 'emergency' | 'investment' | 'purchase' | 'debt' | 'other';
+}
+
+export interface PlannedPurchase {
+  id: string;
+  item: string;
+  estimatedPrice: number;
+  urgency: 'high' | 'medium' | 'low';
+  canInstall: boolean;
+  maxInstallments?: number;
+  category: string;
+  notes?: string;
+}
+
+export interface Debt {
+  id: string;
+  name: string;
+  totalAmount: number;
+  remainingAmount: number;
+  monthlyPayment: number;
+  interestRate: number;
+  installmentsLeft: number;
+  type: 'loan' | 'financing' | 'card' | 'other';
+}
+
+export interface FinancialSummary {
+  currentBalance: number;
+  monthlyIncome: number;
+  monthlyExpenses: number;
+  projectedBalance: number;
+  creditCardDebt: number;
+  totalDebts: number;
+  savingsRate: number;
+}
+
+export type FinancialLight = 'green' | 'yellow' | 'red';
