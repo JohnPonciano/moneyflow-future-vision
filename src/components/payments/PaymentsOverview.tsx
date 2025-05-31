@@ -1,7 +1,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { AlertTriangle, Clock, CheckCircle, CreditCard } from 'lucide-react';
+import { AlertTriangle, Clock, CheckCircle, CreditCard as CreditCardIcon } from 'lucide-react';
 import { Transaction, CreditCard, CreditCardPurchase, CreditCardSubscription } from '@/lib/types';
 
 interface PaymentsOverviewProps {
@@ -97,7 +97,7 @@ export function PaymentsOverview({
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">Total do Mês</CardTitle>
-          <CreditCard className="h-4 w-4 text-blue-500" />
+          <CreditCardIcon className="h-4 w-4 text-blue-500" />
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">

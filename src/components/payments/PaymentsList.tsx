@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { CheckCircle, AlertTriangle, Clock, CreditCard, Receipt } from 'lucide-react';
+import { CheckCircle, AlertTriangle, Clock, CreditCard as CreditCardIcon, Receipt } from 'lucide-react';
 import { Transaction, CreditCard, CreditCardPurchase, CreditCardSubscription } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 
@@ -103,7 +103,7 @@ export function PaymentsList({
     <Tabs defaultValue="invoices" className="w-full">
       <TabsList className="grid w-full grid-cols-2">
         <TabsTrigger value="invoices" className="flex items-center gap-2">
-          <CreditCard className="h-4 w-4" />
+          <CreditCardIcon className="h-4 w-4" />
           Faturas de Cartão
         </TabsTrigger>
         <TabsTrigger value="recurring" className="flex items-center gap-2">

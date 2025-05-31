@@ -9,6 +9,50 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      credit_card_invoices: {
+        Row: {
+          card_id: string | null
+          created_at: string | null
+          due_date: string
+          id: string
+          is_paid: boolean | null
+          month: number
+          total_amount: number
+          updated_at: string | null
+          year: number
+        }
+        Insert: {
+          card_id?: string | null
+          created_at?: string | null
+          due_date: string
+          id?: string
+          is_paid?: boolean | null
+          month: number
+          total_amount: number
+          updated_at?: string | null
+          year: number
+        }
+        Update: {
+          card_id?: string | null
+          created_at?: string | null
+          due_date?: string
+          id?: string
+          is_paid?: boolean | null
+          month?: number
+          total_amount?: number
+          updated_at?: string | null
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "credit_card_invoices_card_id_fkey"
+            columns: ["card_id"]
+            isOneToOne: false
+            referencedRelation: "credit_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       credit_card_purchases: {
         Row: {
           amount: number
@@ -18,6 +62,8 @@ export type Database = {
           description: string
           id: string
           installments: number
+          is_paid: boolean | null
+          is_recurring: boolean | null
           purchase_date: string
           updated_at: string
         }
@@ -29,6 +75,8 @@ export type Database = {
           description: string
           id?: string
           installments?: number
+          is_paid?: boolean | null
+          is_recurring?: boolean | null
           purchase_date: string
           updated_at?: string
         }
@@ -40,6 +88,8 @@ export type Database = {
           description?: string
           id?: string
           installments?: number
+          is_paid?: boolean | null
+          is_recurring?: boolean | null
           purchase_date?: string
           updated_at?: string
         }
@@ -62,6 +112,7 @@ export type Database = {
           description: string
           id: string
           is_active: boolean
+          is_paid: boolean | null
           start_date: string
           updated_at: string
         }
@@ -73,6 +124,7 @@ export type Database = {
           description: string
           id?: string
           is_active?: boolean
+          is_paid?: boolean | null
           start_date: string
           updated_at?: string
         }
@@ -84,6 +136,7 @@ export type Database = {
           description?: string
           id?: string
           is_active?: boolean
+          is_paid?: boolean | null
           start_date?: string
           updated_at?: string
         }
@@ -254,6 +307,7 @@ export type Database = {
           id: string
           is_recurring: boolean
           recurring_pattern: string | null
+          status: string | null
           tags: string[] | null
           type: string
           updated_at: string
@@ -267,6 +321,7 @@ export type Database = {
           id?: string
           is_recurring?: boolean
           recurring_pattern?: string | null
+          status?: string | null
           tags?: string[] | null
           type: string
           updated_at?: string
@@ -280,6 +335,7 @@ export type Database = {
           id?: string
           is_recurring?: boolean
           recurring_pattern?: string | null
+          status?: string | null
           tags?: string[] | null
           type?: string
           updated_at?: string
