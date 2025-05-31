@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { AlertTriangle, Clock, CheckCircle, CreditCard as CreditCardIcon } from 'lucide-react';
 import { Transaction, CreditCard, CreditCardPurchase, CreditCardSubscription } from '@/lib/types';
+import { usePaymentRecords } from '@/hooks/usePaymentRecords';
 
 interface PaymentsOverviewProps {
   transactions: Transaction[];
@@ -17,6 +18,7 @@ export function PaymentsOverview({
   purchases, 
   subscriptions 
 }: PaymentsOverviewProps) {
+  const { isItemPaid } = usePaymentRecords();
   const today = new Date();
   const currentMonth = today.getMonth();
   const currentYear = today.getFullYear();
@@ -44,23 +46,31 @@ export function PaymentsOverview({
     const isOverdue = dueDate < today;
     const isDueSoon = dueDate <= new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
     
+    const invoiceId = `${card.id}-${currentYear}-${currentMonth}`;
+    const isPaid = isItemPaid('invoice', invoiceId, currentMonth, currentYear);
+    
     return {
       card,
       amount: totalAmount,
       dueDate,
-      isOverdue,
-      isDueSoon
+      isOverdue: !isPaid && isOverdue,
+      isDueSoon: !isPaid && isDueSoon,
+      isPaid
     };
-  });
+  }).filter(inv => inv.amount > 0);
 
   // Contas recorrentes vencendo
-  const recurringTransactions = transactions.filter(t => 
-    t.isRecurring && t.type === 'expense'
-  );
+  const recurringTransactions = transactions
+    .filter(t => t.isRecurring && t.type === 'expense')
+    .map(transaction => ({
+      ...transaction,
+      isPaid: isItemPaid('transaction', transaction.id, currentMonth, currentYear)
+    }));
 
   const overdueInvoices = monthlyInvoices.filter(inv => inv.isOverdue);
-  const dueSoonInvoices = monthlyInvoices.filter(inv => inv.isDueSoon && !inv.isOverdue);
-  const totalMonthlyAmount = monthlyInvoices.reduce((sum, inv) => sum + inv.amount, 0);
+  const dueSoonInvoices = monthlyInvoices.filter(inv => inv.isDueSoon);
+  const unpaidInvoices = monthlyInvoices.filter(inv => !inv.isPaid);
+  const unpaidRecurring = recurringTransactions.filter(t => !t.isPaid);
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -96,15 +106,15 @@ export function PaymentsOverview({
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Total do Mês</CardTitle>
+          <CardTitle className="text-sm font-medium">Pendentes do Mês</CardTitle>
           <CreditCardIcon className="h-4 w-4 text-blue-500" />
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">
-            R$ {totalMonthlyAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            R$ {unpaidInvoices.reduce((sum, inv) => sum + inv.amount, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
           </div>
           <p className="text-xs text-muted-foreground">
-            {monthlyInvoices.length} faturas
+            {unpaidInvoices.length} faturas não pagas
           </p>
         </CardContent>
       </Card>
@@ -115,9 +125,9 @@ export function PaymentsOverview({
           <CheckCircle className="h-4 w-4 text-green-500" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{recurringTransactions.length}</div>
+          <div className="text-2xl font-bold">{unpaidRecurring.length}</div>
           <p className="text-xs text-muted-foreground">
-            Ativas no sistema
+            Pendentes este mês
           </p>
         </CardContent>
       </Card>

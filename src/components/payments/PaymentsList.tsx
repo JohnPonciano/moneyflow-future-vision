@@ -1,13 +1,13 @@
 
-import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { CheckCircle, AlertTriangle, Clock, CreditCard as CreditCardIcon, Receipt } from 'lucide-react';
+import { CheckCircle, AlertTriangle, Clock, CreditCard as CreditCardIcon, Receipt, X } from 'lucide-react';
 import { Transaction, CreditCard, CreditCardPurchase, CreditCardSubscription } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
+import { usePaymentRecords } from '@/hooks/usePaymentRecords';
 
 interface PaymentsListProps {
   transactions: Transaction[];
@@ -22,9 +22,8 @@ export function PaymentsList({
   purchases, 
   subscriptions 
 }: PaymentsListProps) {
-  const [paidInvoices, setPaidInvoices] = useState<Set<string>>(new Set());
-  const [paidRecurring, setPaidRecurring] = useState<Set<string>>(new Set());
   const { toast } = useToast();
+  const { addPaymentRecord, removePaymentRecord, isItemPaid } = usePaymentRecords();
 
   const today = new Date();
   const currentMonth = today.getMonth();
@@ -49,41 +48,73 @@ export function PaymentsList({
       dueDate.setMonth(dueDate.getMonth() + 1);
     }
     
-    const isOverdue = dueDate < today;
-    const isDueSoon = dueDate <= new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
+    const invoiceId = `${card.id}-${currentYear}-${currentMonth}`;
+    const isPaid = isItemPaid('invoice', invoiceId, currentMonth, currentYear);
+    const isOverdue = !isPaid && dueDate < today;
+    const isDueSoon = !isPaid && dueDate <= new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
     
     return {
-      id: `${card.id}-${currentYear}-${currentMonth}`,
+      id: invoiceId,
       card,
       amount: totalAmount,
       dueDate,
       isOverdue,
       isDueSoon,
-      isPaid: paidInvoices.has(`${card.id}-${currentYear}-${currentMonth}`)
+      isPaid
     };
   }).filter(inv => inv.amount > 0);
 
   // Contas recorrentes
   const recurringBills = transactions
     .filter(t => t.isRecurring && t.type === 'expense')
-    .map(transaction => ({
-      ...transaction,
-      isPaid: paidRecurring.has(transaction.id),
-      isOverdue: false, // Por simplicidade, considerar que não estão em atraso
-      isDueSoon: true // Considerar que sempre estão próximas do vencimento
-    }));
-
-  const handleMarkAsPaid = (id: string, type: 'invoice' | 'recurring') => {
-    if (type === 'invoice') {
-      setPaidInvoices(prev => new Set([...prev, id]));
-    } else {
-      setPaidRecurring(prev => new Set([...prev, id]));
-    }
-    
-    toast({
-      title: "Pagamento registrado",
-      description: "O item foi marcado como pago com sucesso.",
+    .map(transaction => {
+      const isPaid = isItemPaid('transaction', transaction.id, currentMonth, currentYear);
+      return {
+        ...transaction,
+        isPaid,
+        isOverdue: false,
+        isDueSoon: !isPaid
+      };
     });
+
+  const handleMarkAsPaid = async (id: string, type: 'invoice' | 'transaction', amount: number) => {
+    try {
+      await addPaymentRecord({
+        payment_type: type,
+        reference_id: id,
+        month: currentMonth,
+        year: currentYear,
+        amount
+      });
+      
+      toast({
+        title: "Pagamento registrado",
+        description: "O item foi marcado como pago com sucesso.",
+      });
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Não foi possível registrar o pagamento.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleUnmarkAsPaid = async (id: string, type: 'invoice' | 'transaction') => {
+    try {
+      await removePaymentRecord(type, id, currentMonth, currentYear);
+      
+      toast({
+        title: "Pagamento removido",
+        description: "O item foi marcado como pendente novamente.",
+      });
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Não foi possível remover o pagamento.",
+        variant: "destructive"
+      });
+    }
   };
 
   const getStatusBadge = (isOverdue: boolean, isDueSoon: boolean, isPaid: boolean) => {
@@ -150,10 +181,20 @@ export function PaymentsList({
                       {getStatusBadge(invoice.isOverdue, invoice.isDueSoon, invoice.isPaid)}
                     </TableCell>
                     <TableCell>
-                      {!invoice.isPaid && (
+                      {invoice.isPaid ? (
                         <Button
                           size="sm"
-                          onClick={() => handleMarkAsPaid(invoice.id, 'invoice')}
+                          variant="outline"
+                          onClick={() => handleUnmarkAsPaid(invoice.id, 'invoice')}
+                          className="flex items-center gap-1"
+                        >
+                          <X className="h-3 w-3" />
+                          Desmarcar
+                        </Button>
+                      ) : (
+                        <Button
+                          size="sm"
+                          onClick={() => handleMarkAsPaid(invoice.id, 'invoice', invoice.amount)}
                           className="flex items-center gap-1"
                         >
                           <CheckCircle className="h-3 w-3" />
@@ -206,10 +247,20 @@ export function PaymentsList({
                       {getStatusBadge(bill.isOverdue, bill.isDueSoon, bill.isPaid)}
                     </TableCell>
                     <TableCell>
-                      {!bill.isPaid && (
+                      {bill.isPaid ? (
                         <Button
                           size="sm"
-                          onClick={() => handleMarkAsPaid(bill.id, 'recurring')}
+                          variant="outline"
+                          onClick={() => handleUnmarkAsPaid(bill.id, 'transaction')}
+                          className="flex items-center gap-1"
+                        >
+                          <X className="h-3 w-3" />
+                          Desmarcar
+                        </Button>
+                      ) : (
+                        <Button
+                          size="sm"
+                          onClick={() => handleMarkAsPaid(bill.id, 'transaction', bill.amount)}
                           className="flex items-center gap-1"
                         >
                           <CheckCircle className="h-3 w-3" />

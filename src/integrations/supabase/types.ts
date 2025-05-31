@@ -258,6 +258,42 @@ export type Database = {
         }
         Relationships: []
       }
+      payment_records: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          month: number
+          paid_date: string
+          payment_type: string
+          reference_id: string
+          updated_at: string
+          year: number
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          id?: string
+          month: number
+          paid_date?: string
+          payment_type: string
+          reference_id: string
+          updated_at?: string
+          year: number
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          month?: number
+          paid_date?: string
+          payment_type?: string
+          reference_id?: string
+          updated_at?: string
+          year?: number
+        }
+        Relationships: []
+      }
       planned_purchases: {
         Row: {
           can_install: boolean
@@ -305,6 +341,7 @@ export type Database = {
           date: string
           description: string
           id: string
+          is_paid: boolean | null
           is_recurring: boolean
           recurring_pattern: string | null
           status: string | null
@@ -319,6 +356,7 @@ export type Database = {
           date: string
           description: string
           id?: string
+          is_paid?: boolean | null
           is_recurring?: boolean
           recurring_pattern?: string | null
           status?: string | null
@@ -333,6 +371,7 @@ export type Database = {
           date?: string
           description?: string
           id?: string
+          is_paid?: boolean | null
           is_recurring?: boolean
           recurring_pattern?: string | null
           status?: string | null
