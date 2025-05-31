@@ -102,3 +102,16 @@ export interface FinancialSummary {
 }
 
 export type FinancialLight = 'green' | 'yellow' | 'red';
+
+export interface CreditCardInvoice {
+  id: string;
+  cardId: string;
+  cardName: string;
+  year: number;
+  month: number;
+  amount: number;
+  status: 'pending' | 'paid';
+  dueDate: Date;
+  paidAt?: Date;
+  paymentMethod?: string;
+}

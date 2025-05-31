@@ -1,5 +1,8 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Invoice, CreditCard, Transaction, CreditCardPurchase } from '../lib/types';
+import { supabase } from '@/integrations/supabase/client';
+import { useCreditCards } from './useCreditCards';
+import { CreditCardInvoice } from '@/lib/types';
 
 // Dados de exemplo
 const mockCards: CreditCard[] = [
@@ -56,62 +59,73 @@ const mockInvoices: Invoice[] = [
   }
 ];
 
-export function usePayments() {
-  const [invoices, setInvoices] = useState<Invoice[]>(mockInvoices);
+export const usePayments = () => {
+  const [invoices, setInvoices] = useState<CreditCardInvoice[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { fetchAll } = useCreditCards();
   const [cards, setCards] = useState<CreditCard[]>(mockCards);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
 
-  const payInvoice = useCallback((invoiceId: string, paymentMethod: 'pix' | 'transfer' | 'debit' | 'other') => {
-    setInvoices(prevInvoices => {
-      const updatedInvoices = prevInvoices.map(invoice => {
-        if (invoice.id === invoiceId) {
+  const payInvoice = async (invoiceId: string) => {
+    try {
+      const [cardId, year, month] = invoiceId.split('-');
+      const invoiceDate = new Date(parseInt(year), parseInt(month) - 1);
+      
+      // Atualiza o status de pagamento das compras
+      const { error: updateError } = await supabase
+        .from('credit_card_purchases')
+        .update({ is_paid: true })
+        .eq('card_id', cardId)
+        .lte('purchase_date', invoiceDate);
+
+      if (updateError) throw updateError;
+
           // Atualiza o status da fatura
-          const updatedInvoice: Invoice = {
-            ...invoice,
-            isPaid: true,
-            paymentDate: new Date(),
-            paymentMethod,
-            paymentStatus: 'paid',
-            paidAmount: invoice.amount,
-            remainingAmount: 0
-          };
+      const { error: invoiceError } = await supabase
+        .from('credit_card_invoices')
+        .update({ 
+          is_paid: true,
+          paid_at: new Date().toISOString(),
+          payment_method: 'credit_card'
+        })
+        .eq('id', invoiceId);
+
+      if (invoiceError) throw invoiceError;
 
           // Cria uma nova transação para o pagamento
-          const paymentTransaction: Transaction = {
-            id: `payment-${invoiceId}`,
-            type: 'expense',
-            category: 'credit-card-payment',
+      const invoice = invoices.find(inv => inv.id === invoiceId);
+      if (invoice) {
+        const { error: transactionError } = await supabase
+          .from('transactions')
+          .insert({
+            description: `Pagamento da fatura do cartão ${invoice.cardName}`,
             amount: invoice.amount,
-            description: `Pagamento da fatura do cartão ${invoice.cardId}`,
-            date: new Date(),
-            isRecurring: false,
-            relatedInvoiceId: invoiceId
-          };
-
-          setTransactions(prev => [...prev, paymentTransaction]);
-
-          // Atualiza o cartão
-          setCards(prevCards => {
-            return prevCards.map(card => {
-              if (card.id === invoice.cardId) {
-                return {
-                  ...card,
-                  availableLimit: card.limit,
-                  currentBalance: 0
-                };
-              }
-              return card;
-            });
+            date: new Date().toISOString(),
+            category: 'credit_card_payment',
+            type: 'expense',
+            payment_method: 'credit_card'
           });
 
-          return updatedInvoice;
-        }
-        return invoice;
-      });
+        if (transactionError) throw transactionError;
+      }
 
-      return updatedInvoices;
-    });
-  }, []);
+      // Recarrega os dados dos cartões
+      await fetchAll();
+
+      // Atualiza o estado local
+      setInvoices(prev => 
+        prev.map(inv => 
+          inv.id === invoiceId 
+            ? { ...inv, status: 'paid', paidAt: new Date() }
+            : inv
+        )
+      );
+
+    } catch (error) {
+      console.error('Error paying invoice:', error);
+      throw error;
+    }
+  };
 
   const addPurchase = useCallback((cardId: string, purchase: Omit<CreditCardPurchase, 'id'>) => {
     setCards(prevCards => {
@@ -140,8 +154,7 @@ export function usePayments() {
             invoice.year === currentYear) {
           return {
             ...invoice,
-            amount: invoice.amount + purchase.amount,
-            remainingAmount: invoice.remainingAmount + purchase.amount
+            amount: invoice.amount + purchase.amount
           };
         }
         return invoice;

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { CreditCard, CreditCardPurchase, CreditCardSubscription } from '@/lib/types';
@@ -8,6 +7,30 @@ export const useCreditCards = () => {
   const [purchases, setPurchases] = useState<CreditCardPurchase[]>([]);
   const [subscriptions, setSubscriptions] = useState<CreditCardSubscription[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const calculateCardLimits = (card: any, purchases: CreditCardPurchase[], subscriptions: CreditCardSubscription[]) => {
+    // Calcula o total de compras não pagas
+    const unpaidPurchases = purchases
+      .filter(p => p.cardId === card.id && !p.isPaid)
+      .reduce((sum, p) => sum + p.amount, 0);
+
+    // Calcula o total de assinaturas ativas
+    const activeSubscriptions = subscriptions
+      .filter(s => s.cardId === card.id && s.isActive)
+      .reduce((sum, s) => sum + s.amount, 0);
+
+    // Calcula o saldo atual (compras + assinaturas)
+    const currentBalance = unpaidPurchases + activeSubscriptions;
+
+    // Calcula o limite disponível
+    const availableLimit = Math.max(0, card.limit - currentBalance);
+
+    return {
+      ...card,
+      currentBalance,
+      availableLimit
+    };
+  };
 
   const fetchCreditCards = async () => {
     try {
@@ -24,10 +47,17 @@ export const useCreditCards = () => {
         limit: Number(item.limit_amount),
         closingDay: item.closing_day,
         dueDay: item.due_day,
-        color: item.color
+        color: item.color,
+        currentBalance: 0,
+        availableLimit: Number(item.limit_amount)
       }));
 
-      setCreditCards(formattedCards);
+      // Atualiza os limites após carregar as compras e assinaturas
+      const updatedCards = formattedCards.map(card => 
+        calculateCardLimits(card, purchases, subscriptions)
+      );
+
+      setCreditCards(updatedCards);
     } catch (error) {
       console.error('Error fetching credit cards:', error);
     }
@@ -49,10 +79,18 @@ export const useCreditCards = () => {
         amount: Number(item.amount),
         installments: item.installments,
         purchaseDate: new Date(item.purchase_date),
-        category: item.category
+        category: item.category,
+        currentInstallment: 1,
+        remainingAmount: Number(item.amount),
+        isPaid: item.is_paid || false
       }));
 
       setPurchases(formattedPurchases);
+
+      // Atualiza os limites dos cartões após carregar as compras
+      setCreditCards(prevCards => 
+        prevCards.map(card => calculateCardLimits(card, formattedPurchases, subscriptions))
+      );
     } catch (error) {
       console.error('Error fetching purchases:', error);
     }
@@ -104,6 +142,8 @@ export const useCreditCards = () => {
         name: data.name,
         limit: Number(data.limit_amount),
         closingDay: data.closing_day,
+        availableLimit: Number(data.limit_amount),
+        currentBalance: 0,
         dueDay: data.due_day,
         color: data.color
       };
@@ -153,6 +193,9 @@ export const useCreditCards = () => {
         cardId: data.card_id,
         description: data.description,
         amount: Number(data.amount),
+        currentInstallment: 1,
+        remainingAmount: Number(data.amount),
+        isPaid: false,
         installments: data.installments,
         purchaseDate: new Date(data.purchase_date),
         category: data.category
@@ -247,18 +290,23 @@ export const useCreditCards = () => {
     }
   };
 
-  useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
+  const fetchAll = async () => {
+    setLoading(true);
+    try {
       await Promise.all([
         fetchCreditCards(),
         fetchPurchases(),
         fetchSubscriptions()
       ]);
+    } catch (error) {
+      console.error('Error fetching credit card data:', error);
+    } finally {
       setLoading(false);
-    };
+    }
+  };
 
-    fetchData();
+  useEffect(() => {
+    fetchAll();
   }, []);
 
   return {
@@ -273,10 +321,6 @@ export const useCreditCards = () => {
     addSubscription,
     deleteSubscription,
     toggleSubscription,
-    refetch: () => {
-      fetchCreditCards();
-      fetchPurchases();
-      fetchSubscriptions();
-    }
+    fetchAll
   };
 };
