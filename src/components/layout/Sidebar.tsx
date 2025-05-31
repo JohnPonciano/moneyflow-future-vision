@@ -1,5 +1,5 @@
 
-import { Home, CreditCard, Target, ShoppingCart, TrendingUp, Settings, Menu } from 'lucide-react';
+import { Home, CreditCard, Target, ShoppingCart, TrendingUp, Settings, Receipt, Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { cn } from '@/lib/utils';
@@ -14,6 +14,7 @@ const menuItems = [
   { id: 'dashboard', label: 'Dashboard', icon: Home },
   { id: 'transactions', label: 'Lançamentos', icon: TrendingUp },
   { id: 'cards', label: 'Cartões', icon: CreditCard },
+  { id: 'payments', label: 'Pagamentos', icon: Receipt },
   { id: 'goals', label: 'Metas', icon: Target },
   { id: 'purchases', label: 'Compras', icon: ShoppingCart },
   { id: 'settings', label: 'Configurações', icon: Settings },
