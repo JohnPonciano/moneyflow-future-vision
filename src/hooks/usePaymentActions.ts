@@ -4,7 +4,7 @@ import { usePaymentRecords } from '@/hooks/usePaymentRecords';
 
 export const usePaymentActions = () => {
   const { toast } = useToast();
-  const { addPaymentRecord, removePaymentRecord } = usePaymentRecords();
+  const { addPaymentRecord, removePaymentRecord, refetch } = usePaymentRecords();
 
   const today = new Date();
   const currentMonth = today.getMonth();
@@ -20,11 +20,15 @@ export const usePaymentActions = () => {
         amount
       });
       
+      // Refaz a consulta para atualizar os dados
+      await refetch();
+      
       toast({
         title: "Pagamento registrado",
         description: "O item foi marcado como pago com sucesso.",
       });
     } catch (error) {
+      console.error('Erro ao marcar como pago:', error);
       toast({
         title: "Erro",
         description: "Não foi possível registrar o pagamento.",
@@ -37,11 +41,15 @@ export const usePaymentActions = () => {
     try {
       await removePaymentRecord(type, id, currentMonth, currentYear);
       
+      // Refaz a consulta para atualizar os dados
+      await refetch();
+      
       toast({
         title: "Pagamento removido",
         description: "O item foi marcado como pendente novamente.",
       });
     } catch (error) {
+      console.error('Erro ao desmarcar pagamento:', error);
       toast({
         title: "Erro",
         description: "Não foi possível remover o pagamento.",

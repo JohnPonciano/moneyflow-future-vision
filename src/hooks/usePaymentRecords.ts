@@ -18,6 +18,7 @@ export const usePaymentRecords = () => {
 
   const fetchPaymentRecords = async () => {
     try {
+      console.log('Fetching payment records...');
       const { data, error } = await supabase
         .from('payment_records')
         .select('*')
@@ -35,6 +36,7 @@ export const usePaymentRecords = () => {
         paid_date: item.paid_date
       }));
 
+      console.log('Payment records fetched:', formattedRecords.length);
       setPaymentRecords(formattedRecords);
     } catch (error) {
       console.error('Error fetching payment records:', error);
@@ -45,6 +47,7 @@ export const usePaymentRecords = () => {
 
   const addPaymentRecord = async (record: Omit<PaymentRecord, 'id' | 'paid_date'>) => {
     try {
+      console.log('Adding payment record:', record);
       const { data, error } = await supabase
         .from('payment_records')
         .insert({
@@ -69,14 +72,17 @@ export const usePaymentRecords = () => {
         paid_date: data.paid_date
       };
 
+      console.log('Payment record added:', newRecord);
       setPaymentRecords(prev => [newRecord, ...prev]);
     } catch (error) {
       console.error('Error adding payment record:', error);
+      throw error;
     }
   };
 
   const removePaymentRecord = async (paymentType: 'invoice' | 'transaction', referenceId: string, month: number, year: number) => {
     try {
+      console.log('Removing payment record:', { paymentType, referenceId, month, year });
       const { error } = await supabase
         .from('payment_records')
         .delete()
@@ -87,26 +93,31 @@ export const usePaymentRecords = () => {
 
       if (error) throw error;
 
-      setPaymentRecords(prev => 
-        prev.filter(record => 
+      setPaymentRecords(prev => {
+        const filtered = prev.filter(record => 
           !(record.payment_type === paymentType && 
             record.reference_id === referenceId && 
             record.month === month && 
             record.year === year)
-        )
-      );
+        );
+        console.log('Payment records after removal:', filtered.length);
+        return filtered;
+      });
     } catch (error) {
       console.error('Error removing payment record:', error);
+      throw error;
     }
   };
 
   const isItemPaid = (paymentType: 'invoice' | 'transaction', referenceId: string, month: number, year: number): boolean => {
-    return paymentRecords.some(record => 
+    const isPaid = paymentRecords.some(record => 
       record.payment_type === paymentType &&
       record.reference_id === referenceId &&
       record.month === month &&
       record.year === year
     );
+    console.log(`Checking if ${paymentType} ${referenceId} is paid for ${month}/${year}:`, isPaid);
+    return isPaid;
   };
 
   useEffect(() => {
