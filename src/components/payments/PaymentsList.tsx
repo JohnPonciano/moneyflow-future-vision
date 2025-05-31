@@ -1,13 +1,11 @@
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { CheckCircle, AlertTriangle, Clock, CreditCard as CreditCardIcon, Receipt, X } from 'lucide-react';
+import { CreditCard as CreditCardIcon, Receipt } from 'lucide-react';
 import { Transaction, CreditCard, CreditCardPurchase, CreditCardSubscription } from '@/lib/types';
-import { useToast } from '@/hooks/use-toast';
 import { usePaymentRecords } from '@/hooks/usePaymentRecords';
+import { usePaymentActions } from '@/hooks/usePaymentActions';
+import { InvoicesTable } from './InvoicesTable';
+import { RecurringBillsTable } from './RecurringBillsTable';
 
 interface PaymentsListProps {
   transactions: Transaction[];
@@ -22,8 +20,8 @@ export function PaymentsList({
   purchases, 
   subscriptions 
 }: PaymentsListProps) {
-  const { toast } = useToast();
-  const { addPaymentRecord, removePaymentRecord, isItemPaid } = usePaymentRecords();
+  const { isItemPaid } = usePaymentRecords();
+  const { handleMarkAsPaid, handleUnmarkAsPaid } = usePaymentActions();
 
   const today = new Date();
   const currentMonth = today.getMonth();
@@ -77,57 +75,20 @@ export function PaymentsList({
       };
     });
 
-  const handleMarkAsPaid = async (id: string, type: 'invoice' | 'transaction', amount: number) => {
-    try {
-      await addPaymentRecord({
-        payment_type: type,
-        reference_id: id,
-        month: currentMonth,
-        year: currentYear,
-        amount
-      });
-      
-      toast({
-        title: "Pagamento registrado",
-        description: "O item foi marcado como pago com sucesso.",
-      });
-    } catch (error) {
-      toast({
-        title: "Erro",
-        description: "Não foi possível registrar o pagamento.",
-        variant: "destructive"
-      });
-    }
+  const handleInvoiceMarkAsPaid = (id: string, amount: number) => {
+    handleMarkAsPaid(id, 'invoice', amount);
   };
 
-  const handleUnmarkAsPaid = async (id: string, type: 'invoice' | 'transaction') => {
-    try {
-      await removePaymentRecord(type, id, currentMonth, currentYear);
-      
-      toast({
-        title: "Pagamento removido",
-        description: "O item foi marcado como pendente novamente.",
-      });
-    } catch (error) {
-      toast({
-        title: "Erro",
-        description: "Não foi possível remover o pagamento.",
-        variant: "destructive"
-      });
-    }
+  const handleInvoiceUnmarkAsPaid = (id: string) => {
+    handleUnmarkAsPaid(id, 'invoice');
   };
 
-  const getStatusBadge = (isOverdue: boolean, isDueSoon: boolean, isPaid: boolean) => {
-    if (isPaid) {
-      return <Badge variant="secondary" className="bg-green-100 text-green-800">Pago</Badge>;
-    }
-    if (isOverdue) {
-      return <Badge variant="destructive">Em Atraso</Badge>;
-    }
-    if (isDueSoon) {
-      return <Badge variant="outline" className="border-yellow-500 text-yellow-700">Vence em breve</Badge>;
-    }
-    return <Badge variant="outline">Pendente</Badge>;
+  const handleBillMarkAsPaid = (id: string, amount: number) => {
+    handleMarkAsPaid(id, 'transaction', amount);
+  };
+
+  const handleBillUnmarkAsPaid = (id: string) => {
+    handleUnmarkAsPaid(id, 'transaction');
   };
 
   return (
@@ -144,143 +105,19 @@ export function PaymentsList({
       </TabsList>
 
       <TabsContent value="invoices">
-        <Card>
-          <CardHeader>
-            <CardTitle>Faturas dos Cartões de Crédito</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Cartão</TableHead>
-                  <TableHead>Valor</TableHead>
-                  <TableHead>Vencimento</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {invoices.map((invoice) => (
-                  <TableRow key={invoice.id}>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <div 
-                          className="w-4 h-4 rounded-full" 
-                          style={{ backgroundColor: invoice.card.color }}
-                        />
-                        {invoice.card.name}
-                      </div>
-                    </TableCell>
-                    <TableCell className="font-medium">
-                      R$ {invoice.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    </TableCell>
-                    <TableCell>
-                      {invoice.dueDate.toLocaleDateString('pt-BR')}
-                    </TableCell>
-                    <TableCell>
-                      {getStatusBadge(invoice.isOverdue, invoice.isDueSoon, invoice.isPaid)}
-                    </TableCell>
-                    <TableCell>
-                      {invoice.isPaid ? (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleUnmarkAsPaid(invoice.id, 'invoice')}
-                          className="flex items-center gap-1"
-                        >
-                          <X className="h-3 w-3" />
-                          Desmarcar
-                        </Button>
-                      ) : (
-                        <Button
-                          size="sm"
-                          onClick={() => handleMarkAsPaid(invoice.id, 'invoice', invoice.amount)}
-                          className="flex items-center gap-1"
-                        >
-                          <CheckCircle className="h-3 w-3" />
-                          Marcar como Pago
-                        </Button>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {invoices.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                      Nenhuma fatura encontrada para este mês
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
+        <InvoicesTable 
+          invoices={invoices}
+          onMarkAsPaid={handleInvoiceMarkAsPaid}
+          onUnmarkAsPaid={handleInvoiceUnmarkAsPaid}
+        />
       </TabsContent>
 
       <TabsContent value="recurring">
-        <Card>
-          <CardHeader>
-            <CardTitle>Contas Recorrentes</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Descrição</TableHead>
-                  <TableHead>Categoria</TableHead>
-                  <TableHead>Valor</TableHead>
-                  <TableHead>Frequência</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {recurringBills.map((bill) => (
-                  <TableRow key={bill.id}>
-                    <TableCell className="font-medium">{bill.description}</TableCell>
-                    <TableCell>{bill.category}</TableCell>
-                    <TableCell>
-                      R$ {bill.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    </TableCell>
-                    <TableCell className="capitalize">{bill.recurringPattern || 'Mensal'}</TableCell>
-                    <TableCell>
-                      {getStatusBadge(bill.isOverdue, bill.isDueSoon, bill.isPaid)}
-                    </TableCell>
-                    <TableCell>
-                      {bill.isPaid ? (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleUnmarkAsPaid(bill.id, 'transaction')}
-                          className="flex items-center gap-1"
-                        >
-                          <X className="h-3 w-3" />
-                          Desmarcar
-                        </Button>
-                      ) : (
-                        <Button
-                          size="sm"
-                          onClick={() => handleMarkAsPaid(bill.id, 'transaction', bill.amount)}
-                          className="flex items-center gap-1"
-                        >
-                          <CheckCircle className="h-3 w-3" />
-                          Marcar como Pago
-                        </Button>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {recurringBills.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                      Nenhuma conta recorrente cadastrada
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
+        <RecurringBillsTable 
+          recurringBills={recurringBills}
+          onMarkAsPaid={handleBillMarkAsPaid}
+          onUnmarkAsPaid={handleBillUnmarkAsPaid}
+        />
       </TabsContent>
     </Tabs>
   );
