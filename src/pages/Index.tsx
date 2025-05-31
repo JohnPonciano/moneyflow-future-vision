@@ -53,23 +53,17 @@ const Index = () => {
     toggleSubscription: toggleCreditCardSubscription
   } = useCreditCards();
 
-  // Generate financial summary
-  const currentBalance = 8500; // Mock current balance - you can make this dynamic later
+  // Generate financial summary usando a nova lógica simplificada
   const monthlyIncome = FinancialEngine.calculateMonthlyIncome(transactions);
   const monthlyExpenses = FinancialEngine.calculateMonthlyExpenses(transactions);
-  const projectedBalance = FinancialEngine.calculateProjectedBalance(currentBalance, transactions, creditCardPurchases);
-  const creditCardDebt = creditCardPurchases.reduce((sum, p) => sum + (p.amount / p.installments), 0);
-  const totalDebts = creditCardDebt + 15000; // Mock additional debts - you can make this dynamic later
-  const savingsRate = monthlyIncome > 0 ? (monthlyIncome - monthlyExpenses) / monthlyIncome : 0;
+  const currentBalance = FinancialEngine.calculateCurrentBalance(transactions);
+  const projectedBalance = FinancialEngine.calculateProjectedBalance(transactions);
 
   const summary: FinancialSummary = {
     currentBalance,
     monthlyIncome,
     monthlyExpenses,
-    projectedBalance,
-    creditCardDebt,
-    totalDebts,
-    savingsRate
+    projectedBalance
   };
 
   const renderCurrentPage = () => {

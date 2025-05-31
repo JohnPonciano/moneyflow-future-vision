@@ -1,6 +1,5 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { TrendingUp, TrendingDown, Wallet, CreditCard } from 'lucide-react';
+import { TrendingUp, TrendingDown, Wallet, CreditCard, AlertTriangle, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 import { FinancialSummary, FinancialLight } from '@/lib/types';
 
 interface FinancialSummaryCardsProps {
@@ -13,6 +12,14 @@ export function FinancialSummaryCards({ summary, financialLight }: FinancialSumm
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'BRL',
+    }).format(value);
+  };
+
+  const formatPercentage = (value: number) => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'percent',
+      minimumFractionDigits: 1,
+      maximumFractionDigits: 1,
     }).format(value);
   };
 
@@ -32,6 +39,18 @@ export function FinancialSummaryCards({ summary, financialLight }: FinancialSumm
     }
   };
 
+  const getBalanceChange = () => {
+    const change = (summary.projectedBalance - summary.currentBalance) / summary.currentBalance;
+    return {
+      value: Math.abs(change),
+      isPositive: change >= 0,
+      icon: change >= 0 ? ArrowUpRight : ArrowDownRight,
+      color: change >= 0 ? 'text-green-600' : 'text-red-600'
+    };
+  };
+
+  const balanceChange = getBalanceChange();
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
       {/* Saldo Atual */}
@@ -43,11 +62,11 @@ export function FinancialSummaryCards({ summary, financialLight }: FinancialSumm
         </CardHeader>
         <CardContent className="relative">
           <div className="text-2xl font-bold text-slate-900">{formatCurrency(summary.currentBalance)}</div>
-          <div className={`flex items-center mt-2 text-xs ${
-            summary.currentBalance > 0 ? 'text-green-600' : 'text-red-600'
-          }`}>
-            <div className={`w-2 h-2 rounded-full mr-2 ${getLightColor(financialLight)}`} />
-            {getLightMessage(financialLight)}
+          <div className="flex items-center justify-between mt-2">
+            <div className={`flex items-center text-xs ${getLightColor(financialLight) === 'bg-green-500' ? 'text-green-600' : getLightColor(financialLight) === 'bg-yellow-500' ? 'text-yellow-600' : 'text-red-600'}`}>
+              <div className={`w-2 h-2 rounded-full mr-2 ${getLightColor(financialLight)}`} />
+              {getLightMessage(financialLight)}
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -61,9 +80,17 @@ export function FinancialSummaryCards({ summary, financialLight }: FinancialSumm
         </CardHeader>
         <CardContent className="relative">
           <div className="text-2xl font-bold text-slate-900">{formatCurrency(summary.monthlyIncome)}</div>
-          <p className="text-xs text-slate-500 mt-2">
-            Taxa de poupança: {(summary.savingsRate * 100).toFixed(1)}%
-          </p>
+          <div className="flex flex-col gap-1 mt-2">
+            <p className="text-xs text-slate-500">
+              Taxa de poupança: <span className="font-medium text-green-600">{formatPercentage(summary.savingsRate)}</span>
+            </p>
+            <div className="w-full bg-gray-200 rounded-full h-1.5">
+              <div 
+                className="bg-green-500 h-1.5 rounded-full" 
+                style={{ width: `${Math.min(summary.savingsRate * 100, 100)}%` }}
+              />
+            </div>
+          </div>
         </CardContent>
       </Card>
 
@@ -76,9 +103,23 @@ export function FinancialSummaryCards({ summary, financialLight }: FinancialSumm
         </CardHeader>
         <CardContent className="relative">
           <div className="text-2xl font-bold text-slate-900">{formatCurrency(summary.monthlyExpenses)}</div>
-          <p className="text-xs text-slate-500 mt-2">
-            {((summary.monthlyExpenses / summary.monthlyIncome) * 100).toFixed(1)}% da renda
-          </p>
+          <div className="flex flex-col gap-1 mt-2">
+            <p className="text-xs text-slate-500">
+              {formatPercentage(summary.monthlyExpenses / summary.monthlyIncome)} da renda
+            </p>
+            <div className="w-full bg-gray-200 rounded-full h-1.5">
+              <div 
+                className={`h-1.5 rounded-full ${
+                  summary.monthlyExpenses > summary.monthlyIncome * 0.7 
+                    ? 'bg-red-500' 
+                    : summary.monthlyExpenses > summary.monthlyIncome * 0.5 
+                    ? 'bg-yellow-500' 
+                    : 'bg-green-500'
+                }`}
+                style={{ width: `${Math.min((summary.monthlyExpenses / summary.monthlyIncome) * 100, 100)}%` }}
+              />
+            </div>
+          </div>
         </CardContent>
       </Card>
 
@@ -91,9 +132,18 @@ export function FinancialSummaryCards({ summary, financialLight }: FinancialSumm
         </CardHeader>
         <CardContent className="relative">
           <div className="text-2xl font-bold text-slate-900">{formatCurrency(summary.projectedBalance)}</div>
-          <p className="text-xs text-slate-500 mt-2">
-            Inclui faturas e gastos previstos
-          </p>
+          <div className="flex items-center justify-between mt-2">
+            <div className={`flex items-center text-xs ${balanceChange.color}`}>
+              <balanceChange.icon className="h-4 w-4 mr-1" />
+              {formatPercentage(balanceChange.value)}
+            </div>
+            {summary.projectedBalance < 0 && (
+              <div className="flex items-center text-xs text-red-600">
+                <AlertTriangle className="h-4 w-4 mr-1" />
+                Saldo negativo
+              </div>
+            )}
+          </div>
         </CardContent>
       </Card>
     </div>

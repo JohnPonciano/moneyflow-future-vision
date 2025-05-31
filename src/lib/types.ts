@@ -1,4 +1,3 @@
-
 export interface Transaction {
   id: string;
   type: 'income' | 'expense';
@@ -9,6 +8,7 @@ export interface Transaction {
   isRecurring: boolean;
   recurringPattern?: 'monthly' | 'weekly' | 'yearly';
   tags?: string[];
+  relatedInvoiceId?: string;
 }
 
 export interface CreditCard {
@@ -18,6 +18,8 @@ export interface CreditCard {
   closingDay: number;
   dueDay: number;
   color: string;
+  availableLimit: number;
+  currentBalance: number;
 }
 
 export interface CreditCardPurchase {
@@ -28,6 +30,9 @@ export interface CreditCardPurchase {
   installments: number;
   purchaseDate: Date;
   category: string;
+  currentInstallment: number;
+  remainingAmount: number;
+  isPaid: boolean;
 }
 
 export interface CreditCardSubscription {
@@ -48,6 +53,11 @@ export interface Invoice {
   amount: number;
   dueDate: Date;
   isPaid: boolean;
+  paymentDate?: Date;
+  paymentMethod?: 'pix' | 'transfer' | 'debit' | 'other';
+  paymentStatus: 'pending' | 'paid' | 'overdue' | 'partial';
+  paidAmount: number;
+  remainingAmount: number;
   purchases: CreditCardPurchase[];
   subscriptions: CreditCardSubscription[];
 }
@@ -89,9 +99,6 @@ export interface FinancialSummary {
   monthlyIncome: number;
   monthlyExpenses: number;
   projectedBalance: number;
-  creditCardDebt: number;
-  totalDebts: number;
-  savingsRate: number;
 }
 
 export type FinancialLight = 'green' | 'yellow' | 'red';

@@ -1,12 +1,16 @@
-
 import { Transaction, CreditCardPurchase, FinancialGoal, Debt, FinancialSummary, FinancialLight } from './types';
 
 export class FinancialEngine {
-  static calculateMonthlyIncome(transactions: Transaction[]): number {
+  static calculateMonthlyIncome(transactions: Transaction[] | undefined): number {
+    if (!transactions || !Array.isArray(transactions)) {
+      return 0;
+    }
+
     const now = new Date();
     const currentMonth = now.getMonth();
     const currentYear = now.getFullYear();
     
+    // Todas as receitas do mês atual
     return transactions
       .filter(t => 
         t.type === 'income' && 
@@ -16,11 +20,16 @@ export class FinancialEngine {
       .reduce((sum, t) => sum + t.amount, 0);
   }
 
-  static calculateMonthlyExpenses(transactions: Transaction[]): number {
+  static calculateMonthlyExpenses(transactions: Transaction[] | undefined): number {
+    if (!transactions || !Array.isArray(transactions)) {
+      return 0;
+    }
+
     const now = new Date();
     const currentMonth = now.getMonth();
     const currentYear = now.getFullYear();
     
+    // Todas as despesas do mês atual
     return transactions
       .filter(t => 
         t.type === 'expense' && 
@@ -30,34 +39,57 @@ export class FinancialEngine {
       .reduce((sum, t) => sum + t.amount, 0);
   }
 
+  static calculateCurrentBalance(transactions: Transaction[] | undefined): number {
+    if (!transactions || !Array.isArray(transactions)) {
+      return 0;
+    }
+
+    const monthlyIncome = this.calculateMonthlyIncome(transactions);
+    const monthlyExpenses = this.calculateMonthlyExpenses(transactions);
+    
+    return monthlyIncome - monthlyExpenses;
+  }
+
   static calculateProjectedBalance(
-    currentBalance: number,
-    transactions: Transaction[],
-    creditCardPurchases: CreditCardPurchase[],
+    transactions: Transaction[] | undefined,
     daysAhead: number = 30
   ): number {
-    const futureDate = new Date();
-    futureDate.setDate(futureDate.getDate() + daysAhead);
-    
-    // Receitas e despesas futuras
-    const futureTransactions = transactions.filter(t => t.date <= futureDate && t.date > new Date());
-    const futureIncome = futureTransactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
-    const futureExpenses = futureTransactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
-    
-    // Faturas de cartão estimadas
-    const creditCardDebt = creditCardPurchases.reduce((sum, purchase) => {
-      const monthlyInstallment = purchase.amount / purchase.installments;
-      return sum + monthlyInstallment;
-    }, 0);
-    
-    return currentBalance + futureIncome - futureExpenses - creditCardDebt;
+    if (!transactions || !Array.isArray(transactions)) {
+      return 0;
+    }
+
+    // Calcula receitas recorrentes mensais
+    const recurringIncome = transactions
+      .filter(t => t.type === 'income' && t.isRecurring)
+      .reduce((sum, t) => sum + t.amount, 0);
+
+    // Calcula despesas recorrentes mensais
+    const recurringExpenses = transactions
+      .filter(t => t.type === 'expense' && t.isRecurring)
+      .reduce((sum, t) => sum + t.amount, 0);
+
+    // Projeção é simplesmente receitas recorrentes - despesas recorrentes
+    return recurringIncome - recurringExpenses;
   }
 
   static getFinancialLight(summary: FinancialSummary): FinancialLight {
-    const { projectedBalance, monthlyIncome, totalDebts } = summary;
+    const { 
+      currentBalance,
+      monthlyIncome, 
+      monthlyExpenses,
+      projectedBalance
+    } = summary;
     
-    if (projectedBalance < 0) return 'red';
-    if (projectedBalance < monthlyIncome * 0.3 || totalDebts > monthlyIncome * 5) return 'yellow';
+    // Situação crítica: saldo negativo ou despesas maiores que receitas
+    if (currentBalance < 0 || monthlyExpenses > monthlyIncome) {
+      return 'red';
+    }
+    
+    // Situação de atenção: projeção negativa ou despesas próximas da receita
+    if (projectedBalance < 0 || monthlyExpenses > monthlyIncome * 0.8) {
+      return 'yellow';
+    }
+    
     return 'green';
   }
 
@@ -65,52 +97,78 @@ export class FinancialEngine {
     purchase: { price: number; installments?: number },
     summary: FinancialSummary
   ): { canBuy: boolean; recommendation: string; bestOption: 'cash' | 'installments' } {
-    const { projectedBalance, monthlyIncome } = summary;
-    const monthlyInstallment = purchase.installments ? purchase.price / purchase.installments : purchase.price;
+    const { currentBalance, monthlyIncome, monthlyExpenses } = summary;
+    const monthlyInstallment = purchase.installments 
+      ? purchase.price / purchase.installments
+      : purchase.price;
     
-    const canBuyCash = projectedBalance - purchase.price > monthlyIncome * 0.2;
-    const canBuyInstallments = monthlyInstallment < monthlyIncome * 0.1;
+    const disposableIncome = monthlyIncome - monthlyExpenses;
+    
+    // Pode comprar à vista se o valor não comprometer mais que 50% do saldo
+    const canBuyCash = purchase.price <= currentBalance * 0.5;
+    
+    // Pode parcelar se a parcela não comprometer mais que 20% da renda disponível
+    const canBuyInstallments = monthlyInstallment <= disposableIncome * 0.2;
     
     if (canBuyCash) {
       return {
         canBuy: true,
-        recommendation: 'Você pode comprar à vista sem comprometer sua reserva de emergência.',
+        recommendation: 'Você pode comprar à vista sem comprometer seu saldo.',
         bestOption: 'cash'
       };
     } else if (canBuyInstallments) {
       return {
         canBuy: true,
-        recommendation: `Recomendamos parcelar em ${purchase.installments}x para não impactar seu fluxo de caixa.`,
+        recommendation: `Recomendamos parcelar em ${purchase.installments}x para não comprometer sua renda mensal.`,
         bestOption: 'installments'
       };
     } else {
       return {
         canBuy: false,
-        recommendation: 'Aguarde alguns meses ou considere uma compra de menor valor.',
+        recommendation: 'Não recomendamos a compra no momento. Considere juntar mais dinheiro ou buscar alternativas.',
         bestOption: 'cash'
       };
     }
   }
 
-  static generateRecommendations(summary: FinancialSummary, goals: FinancialGoal[]): string[] {
+  static generateRecommendations(summary: FinancialSummary, goals: FinancialGoal[] | undefined): string[] {
     const recommendations: string[] = [];
-    const { monthlyIncome, monthlyExpenses, projectedBalance, savingsRate } = summary;
+    const { 
+      monthlyIncome, 
+      monthlyExpenses, 
+      currentBalance,
+      projectedBalance
+    } = summary;
     
-    if (savingsRate < 0.2) {
-      recommendations.push('Tente economizar pelo menos 20% da sua renda mensal.');
+    // Recomendações baseadas na situação atual
+    if (currentBalance < 0) {
+      recommendations.push(
+        'Situação crítica: Seu saldo está negativo. Priorize cortar gastos não essenciais imediatamente.'
+      );
     }
     
     if (monthlyExpenses > monthlyIncome * 0.8) {
-      recommendations.push('Suas despesas estão muito altas. Considere revisar gastos desnecessários.');
+      const exceeding = monthlyExpenses - (monthlyIncome * 0.8);
+      recommendations.push(
+        `Reduza despesas em R$ ${exceeding.toFixed(2)} para manter gastos abaixo de 80% da sua renda.`
+      );
     }
     
-    if (projectedBalance < monthlyIncome * 0.3) {
-      recommendations.push('Sua reserva de emergência está baixa. Priorize poupar nos próximos meses.');
+    if (projectedBalance < 0) {
+      recommendations.push(
+        'Atenção: Suas despesas fixas estão maiores que suas receitas fixas. Revise seus gastos recorrentes.'
+      );
     }
     
-    const emergencyGoal = goals.find(g => g.category === 'emergency');
-    if (!emergencyGoal || emergencyGoal.currentAmount < monthlyIncome * 6) {
-      recommendations.push('Crie uma reserva de emergência equivalente a 6 meses de gastos.');
+    // Verifica se tem reserva de emergência
+    if (goals && Array.isArray(goals)) {
+      const emergencyGoal = goals.find(g => g.category === 'emergency');
+      if (!emergencyGoal || emergencyGoal.currentAmount < monthlyExpenses * 3) {
+        const needed = (monthlyExpenses * 3) - (emergencyGoal?.currentAmount || 0);
+        recommendations.push(
+          `Procure reservar R$ ${needed.toFixed(2)} para ter 3 meses de despesas guardados para emergências.`
+        );
+      }
     }
     
     return recommendations;
