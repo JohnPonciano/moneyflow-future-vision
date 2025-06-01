@@ -132,9 +132,9 @@ const Index = () => {
         return (
           <Purchases
             purchases={plannedPurchases}
+            summary={summary}
             onAddPurchase={addPlannedPurchase}
             onDeletePurchase={deletePlannedPurchase}
-            loading={purchasesLoading}
           />
         );
       case "payments":
