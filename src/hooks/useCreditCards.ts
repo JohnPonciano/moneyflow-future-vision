@@ -207,6 +207,44 @@ export const useCreditCards = () => {
     }
   };
 
+  const editPurchase = async (id: string, purchase: Partial<CreditCardPurchase>) => {
+    try {
+      const updateData: any = {};
+      
+      if (purchase.description) updateData.description = purchase.description;
+      if (purchase.amount) updateData.amount = purchase.amount;
+      if (purchase.installments) updateData.installments = purchase.installments;
+      if (purchase.purchaseDate) updateData.purchase_date = purchase.purchaseDate.toISOString().split('T')[0];
+      if (purchase.category) updateData.category = purchase.category;
+
+      const { data, error } = await supabase
+        .from('credit_card_purchases')
+        .update(updateData)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      const updatedPurchase: CreditCardPurchase = {
+        id: data.id,
+        cardId: data.card_id,
+        description: data.description,
+        amount: Number(data.amount),
+        currentInstallment: 1,
+        remainingAmount: Number(data.amount),
+        isPaid: data.is_paid || false,
+        installments: data.installments,
+        purchaseDate: new Date(data.purchase_date),
+        category: data.category
+      };
+
+      setPurchases(prev => prev.map(p => p.id === id ? updatedPurchase : p));
+    } catch (error) {
+      console.error('Error editing purchase:', error);
+    }
+  };
+
   const deletePurchase = async (id: string) => {
     try {
       const { error } = await supabase
@@ -317,6 +355,7 @@ export const useCreditCards = () => {
     addCard,
     deleteCard,
     addPurchase,
+    editPurchase,
     deletePurchase,
     addSubscription,
     deleteSubscription,
