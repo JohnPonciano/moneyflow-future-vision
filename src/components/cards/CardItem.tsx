@@ -44,14 +44,23 @@ export function CardItem({
     const cardSubscriptions = subscriptions.filter(s => s.cardId === card.id && s.isActive);
     
     const now = new Date();
+    
+    // Calcular compras parceladas (valor das parcelas restantes)
     const purchasesUsedLimit = cardPurchases.reduce((sum, purchase) => {
-      const monthsSincePurchase = (now.getFullYear() - purchase.purchaseDate.getFullYear()) * 12 + 
-                                  (now.getMonth() - purchase.purchaseDate.getMonth());
-      const remainingInstallments = Math.max(0, purchase.installments - monthsSincePurchase);
-      const monthlyInstallment = purchase.amount / purchase.installments;
-      return sum + (monthlyInstallment * remainingInstallments);
+      const purchaseDate = new Date(purchase.purchaseDate);
+      const monthsSincePurchase = (now.getFullYear() - purchaseDate.getFullYear()) * 12 + 
+                                  (now.getMonth() - purchaseDate.getMonth());
+      
+      // Se a compra ainda não foi totalmente paga
+      if (monthsSincePurchase >= 0 && monthsSincePurchase < purchase.installments) {
+        const remainingInstallments = purchase.installments - monthsSincePurchase;
+        const monthlyInstallment = purchase.amount / purchase.installments;
+        return sum + (monthlyInstallment * remainingInstallments);
+      }
+      return sum;
     }, 0);
     
+    // Calcular assinaturas ativas (valor mensal)
     const subscriptionsUsedLimit = cardSubscriptions.reduce((sum, subscription) => sum + subscription.amount, 0);
     
     return purchasesUsedLimit + subscriptionsUsedLimit;
