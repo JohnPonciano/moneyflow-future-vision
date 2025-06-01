@@ -34,8 +34,7 @@ const Index = () => {
     transactions, 
     loading: transactionsLoading, 
     addTransaction, 
-    deleteTransaction, 
-    updateTransaction 
+    deleteTransaction
   } = useTransactions();
   
   const { 
@@ -47,11 +46,11 @@ const Index = () => {
   } = useGoals();
   
   const { 
-    plannedPurchases, 
+    purchases: plannedPurchases, 
     loading: purchasesLoading, 
-    addPlannedPurchase, 
-    updatePlannedPurchase, 
-    deletePlannedPurchase 
+    addPurchase: addPlannedPurchase, 
+    updatePurchase: updatePlannedPurchase, 
+    deletePurchase: deletePlannedPurchase 
   } = usePlannedPurchases();
 
   const renderContent = () => {
@@ -60,7 +59,6 @@ const Index = () => {
         return (
           <Dashboard 
             transactions={transactions}
-            creditCards={creditCards}
             goals={goals}
           />
         );
@@ -70,7 +68,6 @@ const Index = () => {
             transactions={transactions}
             onAddTransaction={addTransaction}
             onDeleteTransaction={deleteTransaction}
-            onUpdateTransaction={updateTransaction}
             loading={transactionsLoading}
           />
         );
@@ -97,13 +94,12 @@ const Index = () => {
             onAddGoal={addGoal}
             onUpdateGoal={updateGoal}
             onDeleteGoal={deleteGoal}
-            loading={goalsLoading}
           />
         );
       case "purchases":
         return (
           <Purchases
-            plannedPurchases={plannedPurchases}
+            purchases={plannedPurchases}
             onAddPurchase={addPlannedPurchase}
             onUpdatePurchase={updatePlannedPurchase}
             onDeletePurchase={deletePlannedPurchase}
@@ -120,7 +116,7 @@ const Index = () => {
           />
         );
       default:
-        return <Dashboard transactions={transactions} creditCards={creditCards} goals={goals} />;
+        return <Dashboard transactions={transactions} goals={goals} />;
     }
   };
 
