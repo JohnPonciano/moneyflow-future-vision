@@ -1,4 +1,5 @@
-import { Transaction, CreditCard, CreditCardPurchase, CreditCardSubscription, FinancialGoal, PlannedPurchase, Debt } from './types';
+
+import { Transaction, CreditCard, CreditCardPurchase, CreditCardSubscription, FinancialGoal, PlannedPurchase } from '@/lib/types';
 
 export const mockTransactions: Transaction[] = [
   {
@@ -7,37 +8,30 @@ export const mockTransactions: Transaction[] = [
     category: 'Salário',
     amount: 5000,
     description: 'Salário mensal',
-    date: new Date(2024, 4, 1),
+    date: new Date('2024-01-01'),
     isRecurring: true,
-    recurringPattern: 'monthly'
+    recurringPattern: 'monthly',
+    tags: ['trabalho', 'principal']
   },
   {
     id: '2',
-    type: 'income',
-    category: 'Freelance',
-    amount: 1200,
-    description: 'Projeto web',
-    date: new Date(2024, 4, 15),
-    isRecurring: false
+    type: 'expense',
+    category: 'Alimentação',
+    amount: 150,
+    description: 'Supermercado',
+    date: new Date('2024-01-02'),
+    isRecurring: false,
+    tags: ['casa', 'necessário']
   },
   {
     id: '3',
     type: 'expense',
-    category: 'Alimentação',
-    amount: 800,
-    description: 'Supermercado',
-    date: new Date(2024, 4, 10),
-    isRecurring: false
-  },
-  {
-    id: '4',
-    type: 'expense',
-    category: 'Moradia',
-    amount: 1500,
-    description: 'Aluguel',
-    date: new Date(2024, 4, 5),
-    isRecurring: true,
-    recurringPattern: 'monthly'
+    category: 'Transporte',
+    amount: 80,
+    description: 'Combustível',
+    date: new Date('2024-01-03'),
+    isRecurring: false,
+    tags: ['carro', 'combustível']
   }
 ];
 
@@ -45,10 +39,12 @@ export const mockCreditCards: CreditCard[] = [
   {
     id: '1',
     name: 'Nubank',
-    limit: 5000,
+    limit: 2000,
     closingDay: 15,
     dueDay: 10,
-    color: '#8A2BE2'
+    color: '#8A2BE2',
+    availableLimit: 1500,
+    currentBalance: 500
   },
   {
     id: '2',
@@ -56,57 +52,56 @@ export const mockCreditCards: CreditCard[] = [
     limit: 3000,
     closingDay: 20,
     dueDay: 15,
-    color: '#FF6600'
+    color: '#FF6600',
+    availableLimit: 2500,
+    currentBalance: 500
   }
 ];
 
-export const mockCreditCardPurchases: CreditCardPurchase[] = [
+export const mockPurchases: CreditCardPurchase[] = [
   {
     id: '1',
     cardId: '1',
-    description: 'Notebook Dell',
-    amount: 2400,
-    installments: 12,
-    purchaseDate: new Date(2024, 4, 10),
-    category: 'Eletrônicos'
+    description: 'Smartphone',
+    amount: 800,
+    installments: 10,
+    purchaseDate: new Date('2024-01-01'),
+    category: 'Eletrônicos',
+    currentInstallment: 1,
+    remainingAmount: 800,
+    isPaid: false
   },
   {
     id: '2',
-    cardId: '1',
-    description: 'Supermercado',
-    amount: 350,
-    installments: 1,
-    purchaseDate: new Date(2024, 4, 12),
-    category: 'Alimentação'
+    cardId: '2',
+    description: 'Notebook',
+    amount: 1200,
+    installments: 12,
+    purchaseDate: new Date('2024-01-05'),
+    category: 'Eletrônicos',
+    currentInstallment: 1,
+    remainingAmount: 1200,
+    isPaid: false
   }
 ];
 
-export const mockCreditCardSubscriptions: CreditCardSubscription[] = [
+export const mockSubscriptions: CreditCardSubscription[] = [
   {
     id: '1',
     cardId: '1',
     description: 'Netflix',
-    amount: 45.90,
-    startDate: new Date(2024, 0, 1),
+    amount: 32.90,
+    startDate: new Date('2024-01-01'),
     category: 'Entretenimento',
     isActive: true
   },
   {
     id: '2',
-    cardId: '1',
+    cardId: '2',
     description: 'Spotify',
     amount: 21.90,
-    startDate: new Date(2024, 1, 15),
+    startDate: new Date('2024-01-01'),
     category: 'Entretenimento',
-    isActive: true
-  },
-  {
-    id: '3',
-    cardId: '2',
-    description: 'Adobe Creative',
-    amount: 89.90,
-    startDate: new Date(2024, 2, 1),
-    category: 'Trabalho',
     isActive: true
   }
 ];
@@ -115,18 +110,18 @@ export const mockGoals: FinancialGoal[] = [
   {
     id: '1',
     title: 'Reserva de Emergência',
-    targetAmount: 30000,
-    currentAmount: 15000,
-    deadline: new Date(2025, 0, 1),
+    targetAmount: 10000,
+    currentAmount: 2500,
+    deadline: new Date('2024-12-31'),
     priority: 'high',
     category: 'emergency'
   },
   {
     id: '2',
     title: 'Viagem para Europa',
-    targetAmount: 15000,
-    currentAmount: 5000,
-    deadline: new Date(2024, 11, 1),
+    targetAmount: 8000,
+    currentAmount: 1200,
+    deadline: new Date('2024-06-30'),
     priority: 'medium',
     category: 'other'
   }
@@ -140,28 +135,17 @@ export const mockPlannedPurchases: PlannedPurchase[] = [
     urgency: 'medium',
     canInstall: true,
     maxInstallments: 12,
-    category: 'Eletrônicos'
+    category: 'Eletrônicos',
+    notes: 'Aguardando promoção'
   },
   {
     id: '2',
     item: 'Geladeira',
-    estimatedPrice: 2800,
+    estimatedPrice: 2200,
     urgency: 'high',
     canInstall: true,
     maxInstallments: 10,
-    category: 'Eletrodomésticos'
-  }
-];
-
-export const mockDebts: Debt[] = [
-  {
-    id: '1',
-    name: 'Financiamento do Carro',
-    totalAmount: 35000,
-    remainingAmount: 15000,
-    monthlyPayment: 850,
-    interestRate: 1.2,
-    installmentsLeft: 18,
-    type: 'financing'
+    category: 'Eletrodomésticos',
+    notes: 'Geladeira atual com defeito'
   }
 ];

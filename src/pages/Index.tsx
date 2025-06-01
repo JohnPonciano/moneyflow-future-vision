@@ -11,6 +11,7 @@ import { useCreditCards } from "@/hooks/useCreditCards";
 import { useTransactions } from "@/hooks/useTransactions";
 import { useGoals } from "@/hooks/useGoals";
 import { usePlannedPurchases } from "@/hooks/usePlannedPurchases";
+import { FinancialSummary } from "@/lib/types";
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState("dashboard");
@@ -49,17 +50,49 @@ const Index = () => {
     purchases: plannedPurchases, 
     loading: purchasesLoading, 
     addPurchase: addPlannedPurchase, 
-    updatePurchase: updatePlannedPurchase, 
     deletePurchase: deletePlannedPurchase 
   } = usePlannedPurchases();
+
+  // Calculate financial summary
+  const calculateFinancialSummary = (): FinancialSummary => {
+    const currentMonth = new Date().getMonth();
+    const currentYear = new Date().getFullYear();
+    
+    const monthlyIncome = transactions
+      .filter(t => t.type === 'income' && 
+        new Date(t.date).getMonth() === currentMonth && 
+        new Date(t.date).getFullYear() === currentYear)
+      .reduce((sum, t) => sum + t.amount, 0);
+    
+    const monthlyExpenses = transactions
+      .filter(t => t.type === 'expense' && 
+        new Date(t.date).getMonth() === currentMonth && 
+        new Date(t.date).getFullYear() === currentYear)
+      .reduce((sum, t) => sum + t.amount, 0);
+    
+    const currentBalance = monthlyIncome - monthlyExpenses;
+    const projectedBalance = currentBalance;
+
+    return {
+      currentBalance,
+      monthlyIncome,
+      monthlyExpenses,
+      projectedBalance
+    };
+  };
+
+  const summary = calculateFinancialSummary();
 
   const renderContent = () => {
     switch (activeTab) {
       case "dashboard":
         return (
           <Dashboard 
+            summary={summary}
             transactions={transactions}
             goals={goals}
+            plannedPurchases={plannedPurchases}
+            onPageChange={setActiveTab}
           />
         );
       case "transactions":
@@ -68,7 +101,6 @@ const Index = () => {
             transactions={transactions}
             onAddTransaction={addTransaction}
             onDeleteTransaction={deleteTransaction}
-            loading={transactionsLoading}
           />
         );
       case "cards":
@@ -101,28 +133,30 @@ const Index = () => {
           <Purchases
             purchases={plannedPurchases}
             onAddPurchase={addPlannedPurchase}
-            onUpdatePurchase={updatePlannedPurchase}
             onDeletePurchase={deletePlannedPurchase}
             loading={purchasesLoading}
           />
         );
       case "payments":
         return (
-          <Payments
-            transactions={transactions}
-            creditCards={creditCards}
-            purchases={purchases}
-            subscriptions={subscriptions}
-          />
+          <Payments />
         );
       default:
-        return <Dashboard transactions={transactions} goals={goals} />;
+        return (
+          <Dashboard 
+            summary={summary}
+            transactions={transactions} 
+            goals={goals} 
+            plannedPurchases={plannedPurchases}
+            onPageChange={setActiveTab}
+          />
+        );
     }
   };
 
   return (
     <div className="flex h-screen bg-gray-50">
-      <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
+      <Sidebar currentPage={activeTab} onPageChange={setActiveTab} />
       <main className="flex-1 overflow-y-auto">
         {renderContent()}
       </main>
