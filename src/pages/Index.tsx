@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Dashboard } from "@/components/dashboard/Dashboard";
@@ -157,8 +156,13 @@ const Index = () => {
   return (
     <div className="flex h-screen bg-gray-50">
       <Sidebar currentPage={activeTab} onPageChange={setActiveTab} />
-      <main className="flex-1 overflow-y-auto">
-        {renderContent()}
+      <main className="flex-1 overflow-y-auto lg:ml-64">
+        <div className="lg:hidden pt-16">
+          {renderContent()}
+        </div>
+        <div className="hidden lg:block">
+          {renderContent()}
+        </div>
       </main>
     </div>
   );
