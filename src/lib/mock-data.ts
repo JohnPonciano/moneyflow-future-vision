@@ -1,4 +1,3 @@
-
 import { Transaction, CreditCard, CreditCardPurchase, CreditCardSubscription, FinancialGoal, PlannedPurchase } from '@/lib/types';
 
 export const mockTransactions: Transaction[] = [
@@ -44,7 +43,9 @@ export const mockCreditCards: CreditCard[] = [
     dueDay: 10,
     color: '#8A2BE2',
     availableLimit: 1500,
-    currentBalance: 500
+    currentBalance: 500,
+    committedAmount: 500,
+    currentInvoiceAmount: 500
   },
   {
     id: '2',
@@ -54,7 +55,9 @@ export const mockCreditCards: CreditCard[] = [
     dueDay: 15,
     color: '#FF6600',
     availableLimit: 2500,
-    currentBalance: 500
+    currentBalance: 500,
+    committedAmount: 500,
+    currentInvoiceAmount: 500
   }
 ];
 
