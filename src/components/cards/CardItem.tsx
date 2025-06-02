@@ -45,17 +45,23 @@ export function CardItem({
     
     const now = new Date();
     
-    // Calcular compras parceladas (valor das parcelas restantes)
+    // Calcular compras (tanto parceladas quanto à vista)
     const purchasesUsedLimit = cardPurchases.reduce((sum, purchase) => {
       const purchaseDate = new Date(purchase.purchaseDate);
       const monthsSincePurchase = (now.getFullYear() - purchaseDate.getFullYear()) * 12 + 
                                   (now.getMonth() - purchaseDate.getMonth());
       
-      // Se a compra ainda não foi totalmente paga
-      if (monthsSincePurchase >= 0 && monthsSincePurchase < purchase.installments) {
-        const remainingInstallments = purchase.installments - monthsSincePurchase;
-        const monthlyInstallment = purchase.amount / purchase.installments;
-        return sum + (monthlyInstallment * remainingInstallments);
+      if (purchase.installments === 1) {
+        // Compra à vista - conta o valor total no mês da compra
+        if (monthsSincePurchase === 0) {
+          return sum + purchase.amount;
+        }
+      } else {
+        // Compra parcelada - conta a parcela mensal se ainda não foi totalmente paga
+        if (monthsSincePurchase >= 0 && monthsSincePurchase < purchase.installments) {
+          const monthlyInstallment = purchase.amount / purchase.installments;
+          return sum + monthlyInstallment;
+        }
       }
       return sum;
     }, 0);
