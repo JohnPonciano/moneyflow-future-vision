@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { CreditCard, CreditCardPurchase, CreditCardSubscription } from '@/lib/types';
@@ -13,7 +14,7 @@ export const useCreditCards = () => {
     const cardPurchases = purchases.filter(p => p.cardId === card.id);
     const cardSubscriptions = subscriptions.filter(s => s.cardId === card.id && s.isActive);
 
-    // Calcular compras (tanto parceladas quanto à vista)
+    // Calcular compras (valor total das compras ainda sendo pagas)
     const purchasesBalance = cardPurchases.reduce((sum, purchase) => {
       const purchaseDate = new Date(purchase.purchaseDate);
       const monthsSincePurchase = (now.getFullYear() - purchaseDate.getFullYear()) * 12 + 
@@ -25,10 +26,9 @@ export const useCreditCards = () => {
           return sum + purchase.amount;
         }
       } else {
-        // Compra parcelada - conta a parcela mensal se ainda não foi totalmente paga
+        // Compra parcelada - conta o valor total se ainda não foi totalmente paga
         if (monthsSincePurchase >= 0 && monthsSincePurchase < purchase.installments) {
-          const monthlyInstallment = purchase.amount / purchase.installments;
-          return sum + monthlyInstallment;
+          return sum + purchase.amount;
         }
       }
       return sum;

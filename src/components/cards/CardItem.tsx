@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
@@ -45,7 +44,7 @@ export function CardItem({
     
     const now = new Date();
     
-    // Calcular compras (tanto parceladas quanto à vista)
+    // Calcular compras (valor total das compras ainda sendo pagas)
     const purchasesUsedLimit = cardPurchases.reduce((sum, purchase) => {
       const purchaseDate = new Date(purchase.purchaseDate);
       const monthsSincePurchase = (now.getFullYear() - purchaseDate.getFullYear()) * 12 + 
@@ -57,10 +56,9 @@ export function CardItem({
           return sum + purchase.amount;
         }
       } else {
-        // Compra parcelada - conta a parcela mensal se ainda não foi totalmente paga
+        // Compra parcelada - conta o valor total se ainda não foi totalmente paga
         if (monthsSincePurchase >= 0 && monthsSincePurchase < purchase.installments) {
-          const monthlyInstallment = purchase.amount / purchase.installments;
-          return sum + monthlyInstallment;
+          return sum + purchase.amount;
         }
       }
       return sum;
