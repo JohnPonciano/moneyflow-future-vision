@@ -14,7 +14,9 @@ const mockCards: CreditCard[] = [
     dueDay: 25,
     color: '#8A05BE',
     availableLimit: 3500,
-    currentBalance: 1500
+    currentBalance: 1500,
+    committedAmount: 1500,
+    currentInvoiceAmount: 1500
   },
   {
     id: '2',
@@ -24,7 +26,9 @@ const mockCards: CreditCard[] = [
     dueDay: 20,
     color: '#EC7000',
     availableLimit: 2000,
-    currentBalance: 1000
+    currentBalance: 1000,
+    committedAmount: 1000,
+    currentInvoiceAmount: 1000
   }
 ];
 
@@ -169,4 +173,4 @@ export const usePayments = () => {
     payInvoice,
     addPurchase
   };
-} 
+}

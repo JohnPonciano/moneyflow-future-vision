@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -35,7 +34,9 @@ export function CardForm({ onAddCard, onCancel }: CardFormProps) {
       dueDay: parseInt(cardForm.dueDay),
       color: cardForm.color,
       currentBalance: 0,
-      availableLimit: parseFloat(cardForm.limit)
+      availableLimit: parseFloat(cardForm.limit),
+      committedAmount: 0,
+      currentInvoiceAmount: 0
     };
 
     onAddCard(card);
