@@ -1,8 +1,10 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { CreditCard, CreditCardPurchase, CreditCardSubscription, Invoice } from '@/lib/types';
 import { CreditCard as CreditCardIcon, Trash2 } from 'lucide-react';
+import { formatCurrency, formatDate } from '@/lib/creditCardUtils';
 
 interface CardItemProps {
   card: CreditCard;
@@ -23,57 +25,8 @@ export function CardItem({
   onDeleteSubscription, 
   onToggleSubscription 
 }: CardItemProps) {
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-    }).format(value);
-  };
-
-  const formatDate = (date: Date) => {
-    return new Intl.DateTimeFormat('pt-BR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-    }).format(date);
-  };
-
-  const calculateUsedLimit = () => {
-    const cardPurchases = purchases.filter(p => p.cardId === card.id);
-    const cardSubscriptions = subscriptions.filter(s => s.cardId === card.id && s.isActive);
-    
-    const now = new Date();
-    
-    // Calcular compras (valor total das compras ainda sendo pagas)
-    const purchasesUsedLimit = cardPurchases.reduce((sum, purchase) => {
-      const purchaseDate = new Date(purchase.purchaseDate);
-      const monthsSincePurchase = (now.getFullYear() - purchaseDate.getFullYear()) * 12 + 
-                                  (now.getMonth() - purchaseDate.getMonth());
-      
-      if (purchase.installments === 1) {
-        // Compra à vista - conta o valor total no mês da compra
-        if (monthsSincePurchase === 0) {
-          return sum + purchase.amount;
-        }
-      } else {
-        // Compra parcelada - conta o valor total se ainda não foi totalmente paga
-        if (monthsSincePurchase >= 0 && monthsSincePurchase < purchase.installments) {
-          return sum + purchase.amount;
-        }
-      }
-      return sum;
-    }, 0);
-    
-    // Calcular assinaturas ativas (valor mensal)
-    const subscriptionsUsedLimit = cardSubscriptions.reduce((sum, subscription) => sum + subscription.amount, 0);
-    
-    return purchasesUsedLimit + subscriptionsUsedLimit;
-  };
-
-  const usedLimit = calculateUsedLimit();
-  const availableLimit = Math.max(0, card.limit - usedLimit);
-  const usagePercentage = (usedLimit / card.limit) * 100;
   const cardSubscriptions = subscriptions.filter(s => s.cardId === card.id);
+  const usagePercentage = (card.committedAmount / card.limit) * 100;
 
   return (
     <Card className="relative overflow-hidden">
@@ -109,23 +62,36 @@ export function CardItem({
       </CardHeader>
       
       <CardContent className="relative space-y-4">
-        <div>
-          <div className="flex justify-between items-center mb-2">
-            <span className="text-sm text-slate-600">Limite usado</span>
-            <span className="text-sm font-medium">{usagePercentage.toFixed(1)}%</span>
-          </div>
-          <div className="w-full bg-slate-200 rounded-full h-2">
-            <div 
-              className="h-2 rounded-full transition-all duration-300"
-              style={{ 
-                width: `${Math.min(usagePercentage, 100)}%`,
-                backgroundColor: usagePercentage > 80 ? '#ef4444' : usagePercentage > 60 ? '#f59e0b' : card.color
-              }}
-            />
-          </div>
-          <div className="flex justify-between text-xs text-slate-500 mt-1">
-            <span>Usado: {formatCurrency(usedLimit)}</span>
-            <span>Disponível: {formatCurrency(availableLimit)}</span>
+        {/* Informações do Limite */}
+        <div className="space-y-3">
+          <div>
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-sm text-slate-600">Limite Comprometido</span>
+              <span className="text-sm font-medium">{usagePercentage.toFixed(1)}%</span>
+            </div>
+            <div className="w-full bg-slate-200 rounded-full h-2">
+              <div 
+                className="h-2 rounded-full transition-all duration-300"
+                style={{ 
+                  width: `${Math.min(usagePercentage, 100)}%`,
+                  backgroundColor: usagePercentage > 80 ? '#ef4444' : usagePercentage > 60 ? '#f59e0b' : card.color
+                }}
+              />
+            </div>
+            <div className="grid grid-cols-3 gap-2 text-xs text-slate-500 mt-2">
+              <div className="text-center">
+                <p className="font-medium text-slate-700">Comprometido</p>
+                <p>{formatCurrency(card.committedAmount)}</p>
+              </div>
+              <div className="text-center">
+                <p className="font-medium text-slate-700">Disponível</p>
+                <p>{formatCurrency(card.availableLimit)}</p>
+              </div>
+              <div className="text-center">
+                <p className="font-medium text-slate-700">Fatura Atual</p>
+                <p className="text-blue-600 font-medium">{formatCurrency(card.currentInvoiceAmount)}</p>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -163,13 +129,13 @@ export function CardItem({
           </div>
         )}
 
-        {/* Fatura Atual */}
+        {/* Fatura Atual - Informações Detalhadas */}
         <div className="border-t pt-4">
-          <h4 className="font-medium mb-2">Fatura Atual</h4>
+          <h4 className="font-medium mb-2">Próxima Fatura</h4>
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
               <span className="text-slate-600">Valor:</span>
-              <span className="font-medium">{formatCurrency(currentInvoice.amount)}</span>
+              <span className="font-medium">{formatCurrency(card.currentInvoiceAmount)}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-slate-600">Vencimento:</span>
@@ -187,7 +153,7 @@ export function CardItem({
           <h4 className="font-medium mb-2">Últimas Compras</h4>
           <div className="space-y-2 max-h-32 overflow-y-auto">
             {purchases
-              .filter(p => p.cardId === card.id)
+              .filter(p => p.cardId === card.id && !p.isPaid)
               .sort((a, b) => b.purchaseDate.getTime() - a.purchaseDate.getTime())
               .slice(0, 3)
               .map((purchase) => (
@@ -199,7 +165,9 @@ export function CardItem({
                   <div className="text-right">
                     <p className="font-medium">{formatCurrency(purchase.amount)}</p>
                     {purchase.installments > 1 && (
-                      <p className="text-slate-500">{purchase.installments}x</p>
+                      <p className="text-slate-500">
+                        {purchase.installments}x de {formatCurrency(purchase.amount / purchase.installments)}
+                      </p>
                     )}
                   </div>
                 </div>

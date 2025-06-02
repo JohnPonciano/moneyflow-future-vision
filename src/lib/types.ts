@@ -20,6 +20,8 @@ export interface CreditCard {
   color: string;
   availableLimit: number;
   currentBalance: number;
+  committedAmount: number; // Valor total comprometido (compras parceladas + à vista)
+  currentInvoiceAmount: number; // Valor da fatura atual (apenas parcelas do mês)
 }
 
 export interface CreditCardPurchase {

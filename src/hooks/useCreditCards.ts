@@ -1,54 +1,13 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { CreditCard, CreditCardPurchase, CreditCardSubscription } from '@/lib/types';
+import { calculateCardFinancials } from '@/lib/creditCardUtils';
 
 export const useCreditCards = () => {
   const [creditCards, setCreditCards] = useState<CreditCard[]>([]);
   const [purchases, setPurchases] = useState<CreditCardPurchase[]>([]);
   const [subscriptions, setSubscriptions] = useState<CreditCardSubscription[]>([]);
   const [loading, setLoading] = useState(true);
-
-  const calculateCardLimits = (card: any, purchases: CreditCardPurchase[], subscriptions: CreditCardSubscription[]) => {
-    const now = new Date();
-    const cardPurchases = purchases.filter(p => p.cardId === card.id);
-    const cardSubscriptions = subscriptions.filter(s => s.cardId === card.id && s.isActive);
-
-    // Calcular compras (valor total das compras ainda sendo pagas)
-    const purchasesBalance = cardPurchases.reduce((sum, purchase) => {
-      const purchaseDate = new Date(purchase.purchaseDate);
-      const monthsSincePurchase = (now.getFullYear() - purchaseDate.getFullYear()) * 12 + 
-                                  (now.getMonth() - purchaseDate.getMonth());
-      
-      if (purchase.installments === 1) {
-        // Compra à vista - conta o valor total no mês da compra
-        if (monthsSincePurchase === 0) {
-          return sum + purchase.amount;
-        }
-      } else {
-        // Compra parcelada - conta o valor total se ainda não foi totalmente paga
-        if (monthsSincePurchase >= 0 && monthsSincePurchase < purchase.installments) {
-          return sum + purchase.amount;
-        }
-      }
-      return sum;
-    }, 0);
-
-    // Calcular assinaturas ativas (valor mensal comprometido)
-    const subscriptionsBalance = cardSubscriptions.reduce((sum, s) => sum + s.amount, 0);
-
-    // Calcular o saldo atual (compras + assinaturas)
-    const currentBalance = purchasesBalance + subscriptionsBalance;
-
-    // Calcular o limite disponível
-    const availableLimit = Math.max(0, card.limit - currentBalance);
-
-    return {
-      ...card,
-      currentBalance,
-      availableLimit
-    };
-  };
 
   const fetchCreditCards = async () => {
     try {
@@ -67,7 +26,9 @@ export const useCreditCards = () => {
         dueDay: item.due_day,
         color: item.color,
         currentBalance: 0,
-        availableLimit: Number(item.limit_amount)
+        availableLimit: Number(item.limit_amount),
+        committedAmount: 0,
+        currentInvoiceAmount: 0
       }));
 
       setCreditCards(formattedCards);
@@ -99,11 +60,6 @@ export const useCreditCards = () => {
       }));
 
       setPurchases(formattedPurchases);
-
-      // Atualiza os limites dos cartões após carregar as compras
-      setCreditCards(prevCards => 
-        prevCards.map(card => calculateCardLimits(card, formattedPurchases, subscriptions))
-      );
     } catch (error) {
       console.error('Error fetching purchases:', error);
     }
@@ -129,14 +85,16 @@ export const useCreditCards = () => {
       }));
 
       setSubscriptions(formattedSubscriptions);
-
-      // Atualiza os limites dos cartões após carregar as assinaturas
-      setCreditCards(prevCards => 
-        prevCards.map(card => calculateCardLimits(card, purchases, formattedSubscriptions))
-      );
     } catch (error) {
       console.error('Error fetching subscriptions:', error);
     }
+  };
+
+  // Função para recalcular os valores dos cartões
+  const updateCardFinancials = () => {
+    setCreditCards(prevCards => 
+      prevCards.map(card => calculateCardFinancials(card, purchases, subscriptions))
+    );
   };
 
   const addCard = async (card: Omit<CreditCard, 'id'>) => {
@@ -163,7 +121,9 @@ export const useCreditCards = () => {
         availableLimit: Number(data.limit_amount),
         currentBalance: 0,
         dueDay: data.due_day,
-        color: data.color
+        color: data.color,
+        committedAmount: 0,
+        currentInvoiceAmount: 0
       };
 
       setCreditCards(prev => [...prev, newCard]);
@@ -219,13 +179,7 @@ export const useCreditCards = () => {
         category: data.category
       };
 
-      const updatedPurchases = [newPurchase, ...purchases];
-      setPurchases(updatedPurchases);
-
-      // Atualiza os limites dos cartões
-      setCreditCards(prevCards => 
-        prevCards.map(card => calculateCardLimits(card, updatedPurchases, subscriptions))
-      );
+      setPurchases(prev => [newPurchase, ...prev]);
     } catch (error) {
       console.error('Error adding purchase:', error);
     }
@@ -263,13 +217,7 @@ export const useCreditCards = () => {
         category: data.category
       };
 
-      const updatedPurchases = purchases.map(p => p.id === id ? updatedPurchase : p);
-      setPurchases(updatedPurchases);
-
-      // Atualiza os limites dos cartões
-      setCreditCards(prevCards => 
-        prevCards.map(card => calculateCardLimits(card, updatedPurchases, subscriptions))
-      );
+      setPurchases(prev => prev.map(p => p.id === id ? updatedPurchase : p));
     } catch (error) {
       console.error('Error editing purchase:', error);
     }
@@ -284,13 +232,7 @@ export const useCreditCards = () => {
 
       if (error) throw error;
 
-      const updatedPurchases = purchases.filter(p => p.id !== id);
-      setPurchases(updatedPurchases);
-
-      // Atualiza os limites dos cartões
-      setCreditCards(prevCards => 
-        prevCards.map(card => calculateCardLimits(card, updatedPurchases, subscriptions))
-      );
+      setPurchases(prev => prev.filter(p => p.id !== id));
     } catch (error) {
       console.error('Error deleting purchase:', error);
     }
@@ -323,13 +265,7 @@ export const useCreditCards = () => {
         isActive: data.is_active
       };
 
-      const updatedSubscriptions = [...subscriptions, newSubscription];
-      setSubscriptions(updatedSubscriptions);
-
-      // Atualiza os limites dos cartões
-      setCreditCards(prevCards => 
-        prevCards.map(card => calculateCardLimits(card, purchases, updatedSubscriptions))
-      );
+      setSubscriptions(prev => [...prev, newSubscription]);
     } catch (error) {
       console.error('Error adding subscription:', error);
     }
@@ -344,13 +280,7 @@ export const useCreditCards = () => {
 
       if (error) throw error;
 
-      const updatedSubscriptions = subscriptions.filter(s => s.id !== id);
-      setSubscriptions(updatedSubscriptions);
-
-      // Atualiza os limites dos cartões
-      setCreditCards(prevCards => 
-        prevCards.map(card => calculateCardLimits(card, purchases, updatedSubscriptions))
-      );
+      setSubscriptions(prev => prev.filter(s => s.id !== id));
     } catch (error) {
       console.error('Error deleting subscription:', error);
     }
@@ -368,15 +298,9 @@ export const useCreditCards = () => {
 
       if (error) throw error;
 
-      const updatedSubscriptions = subscriptions.map(s =>
+      setSubscriptions(prev => prev.map(s =>
         s.id === id ? { ...s, isActive: !s.isActive } : s
-      );
-      setSubscriptions(updatedSubscriptions);
-
-      // Atualiza os limites dos cartões
-      setCreditCards(prevCards => 
-        prevCards.map(card => calculateCardLimits(card, purchases, updatedSubscriptions))
-      );
+      ));
     } catch (error) {
       console.error('Error toggling subscription:', error);
     }
@@ -401,11 +325,9 @@ export const useCreditCards = () => {
     fetchAll();
   }, []);
 
-  // Recalcular limites sempre que purchases ou subscriptions mudarem
+  // Recalcular valores sempre que purchases ou subscriptions mudarem
   useEffect(() => {
-    setCreditCards(prevCards => 
-      prevCards.map(card => calculateCardLimits(card, purchases, subscriptions))
-    );
+    updateCardFinancials();
   }, [purchases, subscriptions]);
 
   return {
